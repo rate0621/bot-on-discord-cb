@@ -1,0 +1,6 @@
+[submodule "common_lib/priconne-gacha-simulator"]
+	path = common_lib/priconne-gacha-simulator
+	url = https://rate0621@github.com/rate0621/priconne-gacha-simulator.git
+[submodule "common_lib/priconne_gacha_simulator"]
+	path = common_lib/priconne_gacha_simulator
+	url = https://rate0621@github.com/rate0621/priconne-gacha-simulator.git
