@@ -5,7 +5,7 @@ import Actions
 
 client = discord.Client()
 
-BOT_TOKEN = ''
+BOT_TOKEN  = os.getenv("DISCORD_BOT_TOKEN", "")
 
 @client.event
 async def on_ready():
