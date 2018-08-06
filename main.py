@@ -18,14 +18,20 @@ async def on_ready():
 async def on_message(message):
   # 送り主がBotだった場合はスルー
   if client.user != message.author:
-    # 発言された内容をチェック
-    if re.match("^プリコネ\sガチャ", message.content):
-      act = Actions.Actions()
-      filepath = act.priconne_gacha_roll10()
-      await client.send_file(message.channel, filepath)
-    elif re.match("^プリコネはカス", message.content):
-      m = 'そり'
-      await client.send_message(message.channel, m)
+    act = Actions.Actions()
+    res_type, res = act.check_and_response(message)
+
+    if res_type == 'file':
+      await client.send_file(message.channel, res)
+
+#    # 発言された内容をチェック
+#    if re.match("^プリコネ\sガチャ", message.content):
+#      act = Actions.Actions()
+#      filepath = act.priconne_gacha_roll10()
+#      await client.send_file(message.channel, filepath)
+#    elif re.match("^プリコネはカス", message.content):
+#      m = 'そり'
+#      await client.send_message(message.channel, m)
 
 
 client.run(BOT_TOKEN)
