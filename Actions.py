@@ -2,6 +2,8 @@ import os, re
 
 import common_lib.priconne_gacha_simulator.GachaSimulation as GachaSimulation
 import common_lib.priconne_gacha_simulator.ImageGenerator  as ImageGenerator
+import common_lib.Common as Common
+import response.Priconne as Pri
 
 class Actions:
   def __init__(self):
@@ -9,21 +11,28 @@ class Actions:
     self.res_type = None
 
   def check_and_response(self, req):
+    # スタンプを返す系以外のは初めにチェックする
     if re.match("^プリコネ\sガチャ", req.content):
       self.res_type = 'file'
       self.res      = self.priconne_gacha_roll10()
-    elif re.search("やばい", req.content):
-      self.res_type = 'file'
-      self.res      = self.priconne_yabaidesune()
-    elif re.search("ありがとう", req.content):
-      self.res_type = 'file'
-      self.res      = self.priconne_arigatou()
-    elif re.search("さすが", req.content):
-      self.res_type = 'file'
-      self.res      = self.priconne_sasuga()
-    elif re.search("おやすみ", req.content):
-      self.res_type = 'file'
-      self.res      = self.priconne_oyasumi()
+
+      return self.res_type, self.res
+
+    elif re.match("^画像\s", req.content):
+      self.res_type = 'text'
+      self.res      = self.getImage(req.content)
+
+      return self.res_type, self.res
+
+    # スタンプ系はこの下に記述していく
+    for word_list in Pri.responses:
+      for word in word_list.split(','):
+        if re.match(word, req.content):
+          here          = os.path.join( os.path.dirname(os.path.abspath(__file__)))
+          self.res      = here + "/static/priconne/" + Pri.responses[word_list]
+          self.res_type = 'file'
+
+          return self.res_type, self.res
 
     return self.res_type, self.res
 
@@ -36,27 +45,12 @@ class Actions:
 
     return gacha_result_path
 
-  def priconne_yabaidesune(self):
-    here       = os.path.join( os.path.dirname(os.path.abspath(__file__)))
-    send_image_path = here + "/static/priconne/0.png"
+  def getImage(self, text):
+    match = re.search("^画像\s(.+)", text)
+    image_name = match.group(1)
 
-    return send_image_path
+    cmn = Common.Common()
+    image_url_list = cmn.getImageUrl(image_name, 1)
 
-  def priconne_arigatou(self):
-    here       = os.path.join( os.path.dirname(os.path.abspath(__file__)))
-    send_image_path = here + "/static/priconne/9.png"
-
-    return send_image_path
-
-  def priconne_sasuga(self):
-    here       = os.path.join( os.path.dirname(os.path.abspath(__file__)))
-    send_image_path = here + "/static/priconne/10.png"
-
-    return send_image_path
-
-  def priconne_oyasumi(self):
-    here       = os.path.join( os.path.dirname(os.path.abspath(__file__)))
-    send_image_path = here + "/static/priconne/12.png"
-
-    return send_image_path
+    return image_url_list[0]
 

@@ -23,15 +23,8 @@ async def on_message(message):
 
     if res_type == 'file':
       await client.send_file(message.channel, res)
-
-#    # 発言された内容をチェック
-#    if re.match("^プリコネ\sガチャ", message.content):
-#      act = Actions.Actions()
-#      filepath = act.priconne_gacha_roll10()
-#      await client.send_file(message.channel, filepath)
-#    elif re.match("^プリコネはカス", message.content):
-#      m = 'そり'
-#      await client.send_message(message.channel, m)
+    if res_type == 'text':
+      await client.send_message(message.channel, res)
 
 
 client.run(BOT_TOKEN)
