@@ -28,6 +28,4 @@ async def on_message(message):
       await client.send_message(message.channel, m)
 
 
-print ('aaaaa')
 client.run(BOT_TOKEN)
-print ('bbbbb')
