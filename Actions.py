@@ -18,6 +18,12 @@ class Actions:
 
       return self.res_type, self.res
 
+    elif re.match("^↑↑↓↓←→←→\sプリコネ\sガチャ", req.content):
+      self.res_type = 'file'
+      self.res      = self.priconne_gacha_god_roll10()
+
+      return self.res_type, self.res
+
     elif re.match("^画像\s", req.content):
       self.res_type = 'text'
       self.res      = self.getImage(req.content)
@@ -39,6 +45,15 @@ class Actions:
   def priconne_gacha_roll10(self):
     gs = GachaSimulation.GachaSimulation()
     charactor_list = gs.roll10()
+
+    ig = ImageGenerator.ImageGenerator()
+    gacha_result_path = ig.gacha_result_generator(charactor_list)
+
+    return gacha_result_path
+
+  def priconne_gacha_god_roll10(self):
+    gs = GachaSimulation.GachaSimulation()
+    charactor_list = gs.god_roll10()
 
     ig = ImageGenerator.ImageGenerator()
     gacha_result_path = ig.gacha_result_generator(charactor_list)
