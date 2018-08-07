@@ -33,7 +33,7 @@ class Actions:
     # スタンプ系はこの下に記述していく
     for word_list in Pri.responses:
       for word in word_list.split(','):
-        if re.match(word, req.content):
+        if re.search(word, req.content):
           here          = os.path.join( os.path.dirname(os.path.abspath(__file__)))
           self.res      = here + "/static/priconne/" + Pri.responses[word_list]
           self.res_type = 'file'
