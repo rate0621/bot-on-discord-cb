@@ -25,6 +25,9 @@ async def on_message(message):
       await client.send_file(message.channel, res)
     if res_type == 'text':
       await client.send_message(message.channel, res)
+    if res_type == 'emoji':
+      for e in res:
+        await client.add_reaction(message, e)
 
 
 client.run(BOT_TOKEN)

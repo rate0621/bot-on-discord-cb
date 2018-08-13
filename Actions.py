@@ -40,6 +40,14 @@ class Actions:
 
           return self.res_type, self.res
 
+    ## 絵文字系はこの下に記述
+    if re.search('幼女', req.content):
+      self.res_type = 'emoji'
+      self.res      = ['you:478527842855026698', 'jo:478527811296952330']
+
+      return self.res_type, self.res
+
+
     return self.res_type, self.res
 
   def priconne_gacha_roll10(self):
