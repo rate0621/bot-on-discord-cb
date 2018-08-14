@@ -21,6 +21,9 @@ async def on_message(message):
     act = Actions.Actions()
     res_type, res = act.check_and_response(message)
 
+#    for i in client.get_all_emojis():
+#      print (i)
+
     if res_type == 'file':
       await client.send_file(message.channel, res)
     if res_type == 'text':
