@@ -30,6 +30,13 @@ class Actions:
 
       return self.res_type, self.res
 
+    elif re.match("^草", req.content):
+      self.res_type = 'file'
+      here          = os.path.join( os.path.dirname(os.path.abspath(__file__)))
+      self.res      = here + "/static/other/kusaa.jpg"
+
+      return self.res_type, self.res
+
     # スタンプ系はこの下に記述していく
     for word_list in Pri.responses:
       for word in word_list.split(','):
