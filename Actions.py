@@ -45,7 +45,11 @@ class Actions:
     # スタンプは5分間に1回しかださない
     last_stamp_time_fp = here + '/last_stamp_time.txt'
     with open(last_stamp_time_fp, mode='r') as fh:
-        last_stamp_time = datetime.strptime(fh.read(), '%Y/%m/%d %H:%M:%S')
+        s = fh.read()
+        if s == '':
+            last_stamp_time = datetime.strptime('2014/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
+        else:
+            last_stamp_time = datetime.strptime(s, '%Y/%m/%d %H:%M:%S')
 
     now = datetime.now()
     if (now - last_stamp_time).total_seconds() >= 500:
