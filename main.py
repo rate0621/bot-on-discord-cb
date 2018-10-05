@@ -11,10 +11,10 @@ BOT_TOKEN  = os.getenv("DISCORD_BOT_TOKEN", "")
 @client.event
 async def on_member_join(member):
   server = member.server
-  channel = discord.utils.get(server.channels, name='雑談', type=discord.ChannelType.text)
+  channel = discord.utils.get(server.channels, name='雑談総合', type=discord.ChannelType.text)
 
   if channel is not None:
-    here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)))
     filepath = here + '/static/priconne/invite.jpg'
     await client.send_file(channel, filepath, content='みなさーん！新しい仲間が来ましたよー！！')
 
