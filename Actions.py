@@ -1,5 +1,6 @@
 import os, re
 from datetime import datetime
+import discord
 
 import common_lib.priconne_gacha_simulator.GachaSimulation as GachaSimulation
 import common_lib.priconne_gacha_simulator.ImageGenerator  as ImageGenerator
@@ -13,6 +14,14 @@ class Actions:
 
   def check_and_response(self, req):
     here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
+
+    channel = discord.utils.get(req.server.channels, name='ガンハ専用クラバト懺悔室', type=discord.ChannelType.text)
+    if channel is not None:
+      if re.search('アメス様', req.content):
+        self.res_type = 'file'
+        self.res      = here + "/static/priconne/amesu.png"
+
+        return self.res_type, self.res
 
     # スタンプを返す系以外のは初めにチェックする
     if re.match("^プリコネ\sガチャ", req.content):
