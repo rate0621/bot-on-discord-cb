@@ -1,5 +1,6 @@
 import os, re
-from datetime import datetime
+import random
+from datetime import datetime, timedelta, timezone
 import discord
 
 import common_lib.priconne_gacha_simulator.GachaSimulation as GachaSimulation
@@ -15,11 +16,31 @@ class Actions:
   def check_and_response(self, req):
     here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
 
+
+    # 凸報告部屋
+    if req.channel.id == '497391628831555584':
+      JST = timezone(timedelta(hours=+9), 'JST')
+      now = datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')
+      if datetime.now(JST).strftime('%Y/%m/%d 00:00:00') <= now <= datetime.now(JST).strftime('%Y/%m/%d 04:59:59'):
+        print (now)
+
+        self.res_type = 'file'
+        self.res      = here + "/static/priconne/amesu2/yohuke.png"
+
+        return self.res_type, self.res
+        
+      else:
+        print (now)
+
+
     # アメス教徒のチャンネルID
+    #if req.channel.id == '504911147280105475': # 開発用
     if req.channel.id == '497625108387594250':
       if re.search('アメス様', req.content):
+        files = os.listdir(here + "/static/priconne/amesu/")
+
         self.res_type = 'file'
-        self.res      = here + "/static/priconne/amesu/otsukare.png"
+        self.res      = here + "/static/priconne/amesu/" + files[random.randrange(len(files))]
 
         return self.res_type, self.res
 
