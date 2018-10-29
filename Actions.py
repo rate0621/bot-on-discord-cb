@@ -15,11 +15,11 @@ class Actions:
   def check_and_response(self, req):
     here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
 
-    channel = discord.utils.get(req.server.channels, name='ガンハ専用クラバト懺悔室', type=discord.ChannelType.text)
-    if channel is not None:
+    # アメス教徒のチャンネルID
+    if req.channel.id == '497625108387594250':
       if re.search('アメス様', req.content):
         self.res_type = 'file'
-        self.res      = here + "/static/priconne/amesu.png"
+        self.res      = here + "/static/priconne/amesu/otsukare.png"
 
         return self.res_type, self.res
 
