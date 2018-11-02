@@ -17,7 +17,8 @@ class Actions:
     here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
 
 
-    # 凸報告部屋
+    # スタンプを返す系以外のは初めにチェックする
+    # おれ騎士、凸報告部屋
     if req.channel.id == '497391628831555584':
       JST = timezone(timedelta(hours=+9), 'JST')
       now = datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')
@@ -44,7 +45,6 @@ class Actions:
 
         return self.res_type, self.res
 
-    # スタンプを返す系以外のは初めにチェックする
     if re.match("^プリコネ\sガチャ", req.content):
       self.res_type = 'file'
       self.res      = self.priconne_gacha_roll10()
@@ -60,6 +60,10 @@ class Actions:
     elif re.match("^画像\s", req.content):
       self.res_type = 'text'
       self.res      = self.getImage(req.content)
+
+    elif re.match("^プリコネ\s(.+)\sチャレンジ$", req.content):
+      self.res_type = 'text'
+      self.res      = self.priconne_gacha_challenge(req.content)
 
       return self.res_type, self.res
 
@@ -134,4 +138,13 @@ class Actions:
     image_url_list = cmn.getImageUrl(image_name, 1)
 
     return image_url_list[0]
+
+  def priconne_gacha_challenge(self, text):
+    match = re.search("^プリコネ\s(.+)\sチャレンジ$", text)
+    chara_name = match.group(1)
+
+    gs = GachaSimulation.GachaSimulation()
+    challenge_count, message = gs.challenge(chara_name)
+
+    return message
 
