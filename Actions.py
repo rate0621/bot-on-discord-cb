@@ -75,7 +75,7 @@ class Actions:
       self.res_type = 'text'
       self.res      = self.have_characters('なゆ')
 
-      #return self.res_type, self.res
+      return self.res_type, self.res
 
 
 #    elif re.match("^草", req.content):
@@ -180,4 +180,40 @@ class Actions:
 
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
 
+    #OAuth2の資格情報を使用してGoogle APIにログインします。
+    gc = gspread.authorize(credentials)
+
+    #共有設定したスプレッドシートキーを変数[SPREADSHEET_KEY]に格納する。
+    SPREADSHEET_KEY = '1yPwbavIQC-pJU_cEy7FlJt8P1gQwFOgkOyVrMFPDg1E'
+
+    #共有設定したスプレッドシートのシート1を開く
+    worksheet = gc.open_by_key(SPREADSHEET_KEY).sheet1
+
+
+    # キャラ数取得
+    ## 空文字除去
+    characters = worksheet.col_values(2)
+    characters = [i for i in characters if i]
+
+    chara_count = len(characters)
+
+    # 対象ユーザのカラム取得
+    _range = worksheet.range('C3:AE3')
+
+    target_name = 'なゆ'
+
+    for i in _range:
+      if i.value == target_name:
+        target_col = i.col
+
+
+    got_characters = worksheet.col_values(target_col)
+    got_characters = [i for i in got_characters if i]
+    got_characters.pop(0)
+
+    for (name, level) in zip(characters, got_characters):
+      print (name + ':' + str(level))
+
+
+    return "OK"
 
