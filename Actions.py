@@ -212,12 +212,12 @@ class Actions:
     got_characters = [i for i in got_characters if i]
     got_characters.pop(0)
 
-    messsage = '```'
+    message = '```'
     for (name, level) in zip(characters, got_characters):
       message += name + ':' + str(level) + "\n"
       #print (name + ':' + str(level))
 
     message += '```'
 
-    return messsage
+    return message
 
