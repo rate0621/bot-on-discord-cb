@@ -2,6 +2,7 @@ import os, re
 import random
 from datetime import datetime, timedelta, timezone
 import discord
+import gspread
 
 import common_lib.priconne_gacha_simulator.GachaSimulation as GachaSimulation
 import common_lib.priconne_gacha_simulator.ImageGenerator  as ImageGenerator
