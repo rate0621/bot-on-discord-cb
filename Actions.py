@@ -8,6 +8,10 @@ import common_lib.priconne_gacha_simulator.ImageGenerator  as ImageGenerator
 import common_lib.Common as Common
 import response.Priconne as Pri
 
+
+#ServiceAccountCredentials：Googleの各サービスへアクセスできるservice変数を生成します。
+from oauth2client.service_account import ServiceAccountCredentials
+
 class Actions:
   def __init__(self):
     self.res      = None
@@ -66,6 +70,13 @@ class Actions:
       self.res      = self.priconne_gacha_challenge(req.content)
 
       return self.res_type, self.res
+
+    elif re.match("^test", req.content):
+      self.res_type = 'text'
+      self.res      = self.have_characters('なゆ')
+
+      #return self.res_type, self.res
+
 
 #    elif re.match("^草", req.content):
 #      self.res_type = 'file'
@@ -147,4 +158,26 @@ class Actions:
     challenge_count, message = gs.challenge(chara_name)
 
     return message
+
+  def have_characters(self, target_user):
+
+    #2つのAPIを記述しないとリフレッシュトークンを3600秒毎に発行し続けなければならない
+    scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+
+    TYPE = os.getenv("GS_TYPE", "")
+    CLIENT_EMAIL = os.getenv("GS_CLIENT_EMAIL", "")
+    PRIVATE_KEY = os.getenv("GS_PRIVATE_KEY", "")
+    PRIVATE_KEY_ID = os.getenv("GS_PRIVATE_KEY_ID", "")
+    CLIENT_ID = os.getenv("GS_CLIENT_ID", "")
+
+    key_dict = {
+      'type': TYPE,
+      'client_email': CLIENT_EMAIL,
+      'private_key': PRIVATE_KEY,
+      'private_key_id': PRIVATE_KEY_ID,
+      'client_id': CLIENT_ID,
+    }
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
+
 
