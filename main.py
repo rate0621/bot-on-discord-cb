@@ -24,6 +24,8 @@ async def on_ready():
   print('Logged in as')
   print(client.user.name)
   print(client.user.id)
+  print(os.getenv("DISCORD_BOT_TOKEN", ""))
+  print(os.getenv("GS_PRIVATE_KEY", ""))
   print('------')
 
 @client.event
