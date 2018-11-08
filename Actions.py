@@ -28,15 +28,12 @@ class Actions:
       JST = timezone(timedelta(hours=+9), 'JST')
       now = datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')
       if datetime.now(JST).strftime('%Y/%m/%d 00:00:00') <= now <= datetime.now(JST).strftime('%Y/%m/%d 04:59:59'):
-        print (now)
-
         self.res_type = 'file'
         self.res      = here + "/static/priconne/amesu2/yohuke.png"
 
         return self.res_type, self.res
         
       else:
-        print (now)
 
 
     # アメス教徒のチャンネルID
@@ -72,9 +69,15 @@ class Actions:
 
       return self.res_type, self.res
 
-    elif re.match("^test", req.content):
+    elif re.match("^プリコネ\s所持キャラ", req.content):
+      match = re.search("^プリコネ\s所持キャラ\s(.+)$", req.content)
+      if match is None:
+        target_user = re.search("(.+)#.*$", req.author)
+      else:
+        target_user = match.group(1)
+
       self.res_type = 'text'
-      self.res      = self.have_characters('なゆ')
+      self.res      = self.have_characters(target_user)
 
       return self.res_type, self.res
 
@@ -161,22 +164,21 @@ class Actions:
     return message
 
   def have_characters(self, target_user):
-
     #2つのAPIを記述しないとリフレッシュトークンを3600秒毎に発行し続けなければならない
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
 
-    TYPE = os.getenv("GS_TYPE", "")
-    CLIENT_EMAIL = os.getenv("GS_CLIENT_EMAIL", "")
-    PRIVATE_KEY = os.getenv("GS_PRIVATE_KEY", "")
+    TYPE           = os.getenv("GS_TYPE", "")
+    CLIENT_EMAIL   = os.getenv("GS_CLIENT_EMAIL", "")
+    PRIVATE_KEY    = os.getenv("GS_PRIVATE_KEY", "")
     PRIVATE_KEY_ID = os.getenv("GS_PRIVATE_KEY_ID", "")
-    CLIENT_ID = os.getenv("GS_CLIENT_ID", "")
+    CLIENT_ID      = os.getenv("GS_CLIENT_ID", "")
 
     key_dict = {
-      'type': TYPE,
-      'client_email': CLIENT_EMAIL,
-      'private_key': PRIVATE_KEY,
+      'type'          : TYPE,
+      'client_email'  : CLIENT_EMAIL,
+      'private_key'   : PRIVATE_KEY,
       'private_key_id': PRIVATE_KEY_ID,
-      'client_id': CLIENT_ID,
+      'client_id'     : CLIENT_ID,
     }
 
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(key_dict, scope)
@@ -201,23 +203,30 @@ class Actions:
     # 対象ユーザのカラム取得
     _range = worksheet.range('C3:AE3')
 
-    target_name = 'なゆ'
-
+    target_col = ''
     for i in _range:
-      if i.value == target_name:
+      if i.value == target_user:
         target_col = i.col
 
+    if target_col == '':
+      return 'そんな人、このクランにはいないみたいですよ？シートの上に存在する名前か確認してみてくださいね。'
 
     got_characters = worksheet.col_values(target_col)
     got_characters = [i for i in got_characters if i]
     got_characters.pop(0)
 
-    message = '```'
-    for (name, level) in zip(characters, got_characters):
-      message += name + ':' + str(level) + "\n"
-      #print (name + ':' + str(level))
+    if len(characters) == len(got_characters):
+      message = '```'
+      message += "☆が３以上のキャラのみを表示します。\n"
+      for (name, level) in zip(characters, got_characters):
+        if not level == '-':
+          if int(level) >= 3:
+            message += name + ':' + str(level) + "\n"
 
-    message += '```'
+      message += '```'
+
+    else:
+      message = '所持キャラ情報がまだ揃ってないみたいですよ？'
 
     return message
 
