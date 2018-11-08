@@ -214,12 +214,18 @@ class Actions:
     got_characters.pop(0)
 
     if len(characters) == len(got_characters):
+      not_makoto = 0
       message = '```'
       message += "☆が３以上のキャラのみを表示します。\n"
       for (name, level) in zip(characters, got_characters):
         if not level == '-':
           if int(level) >= 3:
             message += name + ':' + str(level) + "\n"
+        elif name == 'マコト':
+          not_makoto = 1
+
+      if not_makoto :
+        message += 'マｗｗマｗｗｗマコトおりゃん奴ーーーｗｗｗｗｗくうううううううｗｗ'
 
       message += '```'
 
