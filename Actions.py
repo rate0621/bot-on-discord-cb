@@ -33,8 +33,6 @@ class Actions:
 
         return self.res_type, self.res
         
-      else:
-
 
     # アメス教徒のチャンネルID
     #if req.channel.id == '504911147280105475': # 開発用
