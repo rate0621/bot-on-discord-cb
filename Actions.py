@@ -61,6 +61,8 @@ class Actions:
       self.res_type = 'text'
       self.res      = self.getImage(req.content)
 
+      return self.res_type, self.res
+
     elif re.match("^プリコネ\s(.+)\sチャレンジ$", req.content):
       self.res_type = 'text'
       self.res      = self.priconne_gacha_challenge(req.content)
