@@ -33,13 +33,6 @@ class Actions:
 
         return self.res_type, self.res
 
-    if re.search('キョウカ', req.content):
-      if not re.search('キョウカちゃん', req.content):
-        self.res_type = 'text'
-        self.res      = req.author.mention + ' 「ちゃん」をつけましょうね？'
-
-        return self.res_type, self.res
-        
 
     # アメス教徒のチャンネルID
     #if req.channel.id == '504911147280105475': # 開発用
@@ -87,6 +80,14 @@ class Actions:
       self.res      = self.have_characters(target_user)
 
       return self.res_type, self.res
+
+    elif re.search('キョウカ', req.content):
+      if not re.search('キョウカちゃん', req.content):
+        self.res_type = 'text'
+        self.res      = req.author.mention + ' 「ちゃん」をつけましょうね？'
+
+        return self.res_type, self.res
+        
 
 
 #    elif re.match("^草", req.content):
