@@ -27,9 +27,16 @@ class Actions:
     if req.channel.id == '497391628831555584':
       JST = timezone(timedelta(hours=+9), 'JST')
       now = datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')
-      if datetime.now(JST).strftime('%Y/%m/%d 00:00:00') <= now <= datetime.now(JST).strftime('%Y/%m/%d 04:59:59'):
+      if datetime.now(JST).strftime('%Y/%m/%d 03:00:00') <= now <= datetime.now(JST).strftime('%Y/%m/%d 04:59:59'):
         self.res_type = 'file'
         self.res      = here + "/static/priconne/amesu2/yohuke.png"
+
+        return self.res_type, self.res
+
+    if re.search('キョウカ', req.content):
+      if not re.search('キョウカちゃん', req.content):
+        self.res_type = 'text'
+        self.res      = req.author.mention + ' 「ちゃん」をつけましょうね？'
 
         return self.res_type, self.res
         
