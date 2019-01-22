@@ -228,9 +228,15 @@ class Actions:
       message = '```'
       message += "☆が３以上のキャラのみを表示します。\n"
       for (name, level) in zip(characters, got_characters):
+        is_designated = ''
+        if re.search('専', level):
+          is_designated = '専'
+          level = re.sub(r'\D', '', level)
+
         if not level == '-':
           if int(level) >= 3:
-            message += name + ':' + str(level) + "\n"
+            #message += name + ':' + str(level) + 's%' + "\n" % is_designated
+            message += name + ':' + str(level) + '%s' % is_designated + "\n"
         elif name == 'マコト':
           not_makoto = 1
 
