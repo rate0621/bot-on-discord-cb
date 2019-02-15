@@ -112,6 +112,7 @@ class Actions:
     if (now - last_stamp_time).total_seconds() >= 500:
       for word_list in Pri.responses:
         for word in word_list.split(','):
+          if re.search(word, req.content):
             self.res      = here + "/static/priconne/" + Pri.responses[word_list]
             self.res_type = 'file'
 
