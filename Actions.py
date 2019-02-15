@@ -126,7 +126,7 @@ class Actions:
       self.res_type = 'emoji'
       self.res      = ['you:478527842855026698', 'jo:478527811296952330']
 
-      if re.search('セトラン', str(req.author)):
+      if re.match('474761974832431148', req.author.id):
         self.res_type = 'emoji'
         self.res      = ['tuho:478871148134924309']
 
