@@ -88,13 +88,13 @@ class Actions:
 
         return self.res_type, self.res
         
+    elif re.match("^プリコネ\sアカリ", req.content):
+      files = os.listdir(here + "/static/priconne/akari/")
 
+      self.res_type = 'file'
+      self.res      = here + "/static/priconne/akari/" + files[random.randrange(len(files))]
 
-#    elif re.match("^草", req.content):
-#      self.res_type = 'file'
-#      self.res      = here + "/static/other/kusaa.jpg"
-#
-#      return self.res_type, self.res
+      return self.res_type, self.res
 
     # スタンプ系はこの下に記述していく
 
@@ -112,7 +112,6 @@ class Actions:
     if (now - last_stamp_time).total_seconds() >= 500:
       for word_list in Pri.responses:
         for word in word_list.split(','):
-          if re.search(word, req.content):
             self.res      = here + "/static/priconne/" + Pri.responses[word_list]
             self.res_type = 'file'
 
