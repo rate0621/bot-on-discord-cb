@@ -137,6 +137,12 @@ class Actions:
 
       return self.res_type, self.res
 
+    if re.match('454636015785869313', req.author.id):
+      self.res_type = 'text'
+      self.res      = '(´^ω^｀)ﾌﾞﾌｫwww'
+
+      return self.res_type, self.res
+
 
     return self.res_type, self.res
 
