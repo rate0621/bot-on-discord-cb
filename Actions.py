@@ -88,7 +88,7 @@ class Actions:
     elif re.search('キョウカ', req.content):
       if not re.search('キョウカちゃん', req.content):
         self.res_type = 'text'
-        self.res      = req.author.mention + ' 「ちゃん」をつけましょうね？'
+        self.res      = req.author.mention + ' は？きちんと「ちゃん」をつけなさいよ'
 
         return self.res_type, self.res
         
