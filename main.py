@@ -2,6 +2,7 @@ import discord
 import re,os
 
 import Actions
+import ManageActions
 
 client = discord.Client()
 
@@ -28,6 +29,14 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+
+  # botへのメンションのときの動作(主に管理者用)
+  if client.user.id in message.content:
+    mact = ManageActions.ManageActions()
+    mact.check_and_action(message)
+
+
+
   # 送り主がBotだった場合はスルー
   if client.user != message.author:
     act = Actions.Actions()
