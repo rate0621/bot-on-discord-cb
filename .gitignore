@@ -3,3 +3,4 @@
 __pycache__
 discord/
 env.sh
+last_stamp_time.txt
