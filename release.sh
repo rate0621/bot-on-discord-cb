@@ -1,6 +1,7 @@
 #!/bin/sh
 
-source secret/env.sh
+# ubuntuだとsourceが使えない
+. secret/env.sh
 
 ## 実行中プロセスの停止
 ps aux | grep discord_bot | grep -v grep | awk '{ print "kill -9", $2 }' | sh
