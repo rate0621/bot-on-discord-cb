@@ -14,6 +14,9 @@ class PriDb():
         query = 'CREATE UNIQUE INDEX IF NOT EXISTS idx_user_id ON discord_%s_users(user_id)' % server_name
         c.execute(query)
 
+        query = 'CREATE TABLE IF NOT EXISTS discord_%s_talks(user_id integer, text text, talk_at text)' % server_name
+        c.execute(query)
+
         conn.commit()
 
     def insert_member(self, server_name, user_id, user_name, join_date):
@@ -25,6 +28,17 @@ class PriDb():
         c.execute(query, user)
 
         conn.commit()
+
+    def insert_talk(self, server_name, user_id, text, talk_at):
+        conn = sqlite3.connect(self.dbname)
+        c = conn.cursor()
+
+        query = 'INSERT INTO discord_%s_talks (user_id, text, talk_at) VALUES (?,?,?)' % server_name
+        talk = (user_id, text, talk_at)
+        c.execute(query, talk)
+
+        conn.commit()
+
 
 if __name__ == "__main__":
     PriDb().create_server_table(111)
