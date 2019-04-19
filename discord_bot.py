@@ -49,20 +49,20 @@ async def on_message(message):
         # 送り主がBotだった場合はスルー
         if client.user != message.author:
 
-            # 発言の内容をDBに格納
-            
-            text = remove_emoji(message.content)
-
-            if text != '':
-                pridb = PriDb.PriDb()
-                pridb.insert_talk(
-                    message.server.id,
-                    message.author.id,
-                    text,
-                    message.timestamp.strftime("%Y/%m/%d %H:%M:%S")
-                )
-
-
+#            # 発言の内容をDBに格納
+#            
+#            text = remove_emoji(message.content)
+#
+#            if text != '':
+#                pridb = PriDb.PriDb()
+#                pridb.insert_talk(
+#                    message.server.id,
+#                    message.author.id,
+#                    text,
+#                    message.timestamp.strftime("%Y/%m/%d %H:%M:%S")
+#                )
+#
+#
             act = Actions.Actions()
             res_type, res = act.check_and_response(message)
 
