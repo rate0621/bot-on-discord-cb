@@ -254,11 +254,11 @@ class Actions:
       if not_jinken :
         message += 'クｗｗクｗｗｗクリスおりゃん奴ーーーｗｗｗｗｗくうううううううｗｗ'
 
-      message += "\n\nもし更新したい場合はここからできるわよ。\n" + os.getenv("CHARA_SHEET", "")
+      message += "\n\nもし更新したい場合はここからできるわよ。（育成相談のトピックにも貼ってあるわ）\n" + os.getenv("CHARA_SHEET", "")
       message += '```'
 
     else:
-      message = "所持キャラ情報がまだ揃ってないみたいね。持っていないキャラは - で入力するのよ。\n" + os.getenv("CHARA_SHEET", "")
+      message = "所持キャラ情報がまだ揃ってないみたいね。持っていないキャラは - で入力するのよ。（スプシへのリンクは育成相談のトピックにも貼られてあるわ）\n" + os.getenv("CHARA_SHEET", "")
 
     return message
 
