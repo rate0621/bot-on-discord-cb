@@ -206,7 +206,7 @@ class Actions:
     gc = gspread.authorize(credentials)
 
     #共有設定したスプレッドシートキーを変数[SPREADSHEET_KEY]に格納する。
-    SPREADSHEET_KEY = '1yPwbavIQC-pJU_cEy7FlJt8P1gQwFOgkOyVrMFPDg1E'
+    SPREADSHEET_KEY = os.getenv("SPREADSHEET_KEY", "")
 
     #共有設定したスプレッドシートのシート1を開く
     worksheet = gc.open_by_key(SPREADSHEET_KEY).sheet1
@@ -228,16 +228,16 @@ class Actions:
         target_col = i.col
 
     if target_col == '':
-      return 'そんな人、このクランにはいないみたいですよ？シートの上に存在する名前か確認してみてくださいね。'
+      return 'そんな人、あたしは知らないわ。シートの上に名前が存在するか確認したらどうかしら。'
 
     got_characters = worksheet.col_values(target_col)
     got_characters = [i for i in got_characters if i]
     got_characters.pop(0)
 
     if len(characters) == len(got_characters):
-      not_makoto = 0
+      not_jinken = 0
       message = '```'
-      message += "☆が３以上のキャラのみを表示します。\n"
+      message += "☆が３以上のキャラのみを表示。\n"
       for (name, level) in zip(characters, got_characters):
         is_designated = ''
         if re.search('専', level):
@@ -248,16 +248,21 @@ class Actions:
           if int(level) >= 3:
             #message += name + ':' + str(level) + 's%' + "\n" % is_designated
             message += name + ':' + str(level) + '%s' % is_designated + "\n"
-        elif name == 'マコト':
-          not_makoto = 1
+        elif re.search('クリス', name):
+          not_jinken = 1
 
-      if not_makoto :
-        message += 'マｗｗマｗｗｗマコトおりゃん奴ーーーｗｗｗｗｗくうううううううｗｗ'
+      if not_jinken :
+        message += 'クｗｗクｗｗｗクリスおりゃん奴ーーーｗｗｗｗｗくうううううううｗｗ'
 
+      message += "\n\nもし更新したい場合はここからできるわよ。\n" + os.getenv("CHARA_SHEET", "")
       message += '```'
 
     else:
-      message = '所持キャラ情報がまだ揃ってないみたいですよ？'
+      message = "所持キャラ情報がまだ揃ってないみたいね。持っていないキャラは - で入力するのよ。\n" + os.getenv("CHARA_SHEET", "")
 
     return message
+
+if __name__ == '__main__':
+  act = Actions()
+  print (act.have_characters('チャット'))
 
