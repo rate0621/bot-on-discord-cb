@@ -42,10 +42,12 @@ class Actions:
 
     if req.channel.id in ('497625108387594250', '562570171173175296'):
       if re.search('アメス様', req.content):
-        files = os.listdir(here + "/static/priconne/amesu/")
-
-        self.res_type = 'file'
-        self.res      = here + "/static/priconne/amesu/" + files[random.randrange(len(files))]
+#        files = os.listdir(here + "/static/priconne/amesu/")
+#
+#        self.res_type = 'file'
+#        self.res      = here + "/static/priconne/amesu/" + files[random.randrange(len(files))]
+        self.res_type = 'text'
+        self.res      = req.author.mention + ' ' + random.choice(Pri.amesu_res)
 
         return self.res_type, self.res
 
@@ -263,6 +265,7 @@ class Actions:
     return message
 
 if __name__ == '__main__':
-  act = Actions()
-  print (act.have_characters('チャット'))
+  pass
+#  act = Actions()
+#  print (act.have_characters('チャット'))
 
