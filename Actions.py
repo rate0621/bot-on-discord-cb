@@ -35,19 +35,28 @@ class Actions:
 
 
     # アメス教徒のチャンネルID
-    #if req.channel.id == '504911147280105475': # 開発用
+    if req.channel.id == '504911147280105475': # 開発用
     # NOTE:
     # 497625108387594250 <-おれきし
     # 562570171173175296 <-青鯖
 
-    if req.channel.id in ('497625108387594250', '562570171173175296'):
-      if re.search('アメス様', req.content):
+    #if req.channel.id in ('497625108387594250', '562570171173175296'):
+      if re.search('アメス', req.content):
 #        files = os.listdir(here + "/static/priconne/amesu/")
 #
 #        self.res_type = 'file'
 #        self.res      = here + "/static/priconne/amesu/" + files[random.randrange(len(files))]
-        self.res_type = 'text'
-        self.res      = req.author.mention + ' ' + random.choice(Pri.amesu_res)
+        if not re.search('アメス様', req.content):
+          self.res_type = 'text'
+          self.res      = req.author.mention + '  ・・・誰に向かって口聞いてるの？'
+
+        else:
+          self.res_type = 'text'
+          self.res      = req.author.mention + ' ' + random.choice(Pri.amesu_res)
+          if re.search('草アアアアアア', self.res):
+            self.res_type = 'file'
+            self.res      = here + "/static/priconne/amesu/kusaaa.png"
+  
 
         return self.res_type, self.res
 
