@@ -35,12 +35,12 @@ class Actions:
 
 
     # アメス教徒のチャンネルID
-    if req.channel.id == '504911147280105475': # 開発用
+    #if req.channel.id == '504911147280105475': # 開発用
     # NOTE:
     # 497625108387594250 <-おれきし
     # 562570171173175296 <-青鯖
 
-    #if req.channel.id in ('497625108387594250', '562570171173175296'):
+    if req.channel.id in ('497625108387594250', '562570171173175296'):
       if re.search('アメス', req.content):
 #        files = os.listdir(here + "/static/priconne/amesu/")
 #
