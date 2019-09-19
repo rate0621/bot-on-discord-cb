@@ -63,7 +63,7 @@ class ClanBattle():
         attack_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
         cm = Common.Common()
-        boss_num, boss_hp = self.get_current_boss()
+        boss_num, boss_name, boss_hp = self.get_current_boss()
 
         ws = cm.get_gsfile('attack_log')
         df = cm.create_gsdf(ws)
@@ -90,7 +90,7 @@ class ClanBattle():
 
         # さきにcurrent_bossの情報更新
         cm = Common.Common()
-        boss_num, boss_hp = self.get_current_boss()
+        boss_num, boss_name, boss_hp = self.get_current_boss()
         ws = cm.get_gsfile('current_boss')
         df = cm.create_gsdf(ws)
 
@@ -175,7 +175,7 @@ class ClanBattle():
 
     def lotate_boss(self):
         cm = Common.Common()
-        boss_num, boss_hp = self.get_current_boss()
+        boss_num, boss_name, boss_hp = self.get_current_boss()
         ws = cm.get_gsfile('current_boss')
         df = cm.create_gsdf(ws)
 

@@ -12,7 +12,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # 都合上一部魔改造を施しているため同ディレクトリに置いてあるgspreadをimportする
 here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(here)
-import gspread
+import gspread_kai as gspread
 
 
 

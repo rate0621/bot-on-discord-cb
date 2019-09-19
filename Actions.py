@@ -24,15 +24,24 @@ class Actions:
 
         # クラバト関連のアクションはここ
         if req.channel.id == '624240053563949061':
-            if re.search('凸', req.content):
+            if re.search("^凸$", req.content):
                 cb = ClanBattle.ClanBattle()
                 boss_num, boss_name, boss_hp = cb.get_current_boss()
                 self.res_type = 'text'
                 self.res = req.author.name + 'が' + boss_name + 'に凸します'
 
+                cb.attack(req.author.id)
 
+                return self.res_type, self.res
 
-            return self.res_type, self.res
+            if re.search("^凸完了\s+\d+$", req.content):
+                cb = ClanBattle.ClanBattle()
+                m = re.search("^凸完了\s+(\d+)$", req.content)
+                
+                damage = m.group(1)
+                damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
+                cb.finish_attack(str(req.author.id), int(damage))
 
 
         # スタンプを返す系以外のは初めにチェックする
