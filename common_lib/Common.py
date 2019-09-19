@@ -5,9 +5,16 @@ import json
 import re
 import os, sys
 import random
-
-import gspread
+import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
+
+# gspreadはpip installで入れられるやつだが、
+# 都合上一部魔改造を施しているため同ディレクトリに置いてあるgspreadをimportする
+here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(here)
+import gspread
+
+
 
 class Common():
     def getImageUrl(self, search_item, total_num):
@@ -34,7 +41,7 @@ class Common():
 
         return img_list
 
-    def getWorkBook(self):
+    def get_workbook(self):
         '''
         共有設定されたスプレッドシートのクライアントを返す
         '''
@@ -65,6 +72,40 @@ class Common():
 
         return gc.open_by_key(SPREADSHEET_KEY)
 
+    def toAlpha(self, num):
+        if num<=26:
+            return chr(64+num)
+        elif num%26==0:
+            return toAlpha(num//26-1)+chr(90)
+        else:
+            return toAlpha(num//26)+chr(64+num%26)
+
+
+    def get_gsfile(self, sheet_name):
+        '''
+        渡された名前のワークシートのインスタンスを返す
+        '''
+
+        wb = self.get_workbook()
+        ws = wb.worksheet(sheet_name)
+
+        return ws
+
+
+    def create_gsdf(self, ws):
+        '''
+        渡されたワークシートをDataFrameに変換し、DF型にして返す。
+        '''
+
+        # 本来get_all_valuesにvalue_render_optionのオプションは存在しない(gspread==3.0.1)
+        df = pd.DataFrame(ws.get_all_values(value_render_option='FORMULA'))
+        df.columns =  list(df.iloc[0])
+        df = df.drop(0, axis=0)
+        df = df.reset_index(drop=True)
+
+        return df
+
+
 
 
 if __name__ == "__main__":
@@ -73,8 +114,9 @@ if __name__ == "__main__":
     #img_url = common.getImageUrl(args[1], 1)
     #print(img_url)
 
-    wb = common.getWorkBook()
-    print (wb)
+    ws = common.get_gsfile('boss_reserve')
+    df = common.create_gsdf(ws)
+    print (df)
     #SPREADSHEET_KEY = os.getenv("SPREADSHEET_KEY", "")
     #worksheet = gc.open_by_key(SPREADSHEET_KEY).sheet1
 
