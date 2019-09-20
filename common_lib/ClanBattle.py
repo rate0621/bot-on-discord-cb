@@ -5,16 +5,53 @@ from datetime import datetime
 
 import Common
 
+
+
 class ClanBattle():
     def __init__(self):
         pass
+
+    def all_clear(self):
+        '''
+        クラバト用のDB（スプシ）の内容をすべて空っぽにする。主に開発時にのみ使う。
+        '''
+        cm = Common.Common()
+        tl = ['boss_reserve', 'attack_log']
+        for t in tl:
+            ws = cm.get_gsfile(t)
+            df = cm.create_gsdf(ws)
+
+            col_lastnum = len(df.columns)
+            row_lastnum = len(df.index)
+
+            cell_list = ws.range('A2:'+cm.toAlpha(col_lastnum)+str(row_lastnum + 1))
+            for cell in cell_list:
+                cell.value = ''
+
+            ws.update_cells(cell_list)
+
+    def sheet_clear(self, t):
+        cm = Common.Common()
+        ws = cm.get_gsfile(t)
+        df = cm.create_gsdf(ws)
+
+        col_lastnum = len(df.columns)
+        row_lastnum = len(df.index)
+
+        cell_list = ws.range('A2:'+cm.toAlpha(col_lastnum)+str(row_lastnum + 1))
+        for cell in cell_list:
+            cell.value = ''
+
+        ws.update_cells(cell_list)
+
 
 
     def get_bosses(self):
         ws = self.get_gsfile('boss_master')
 
 
-    def boss_reserve(self, month, user_id, boss_num):
+    def boss_reserve(self, user_id, boss_num):
+        _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cm = Common.Common()
         ws = cm.get_gsfile('boss_reserve')
         df = cm.create_gsdf(ws)
@@ -29,7 +66,7 @@ class ClanBattle():
             print ('予約します')
 
             append_row_num = len(ws.col_values(1)) + 1
-            s = pd.Series([month, user_id, '=VLOOKUP(B'+str(append_row_num)+',clan_members!A2:B200,2,False)', boss_num, 0], index=df.columns)
+            s = pd.Series([_datetime, user_id, '=VLOOKUP(B'+str(append_row_num)+',clan_members!A2:B200,2,False)', boss_num, 0], index=df.columns)
 
             # MEMO: appendするときはnameを指定しないとエラーになるが、ignore_index=True とすることで連番を振ってくれる
             df = df.append(s, ignore_index=True)
@@ -82,9 +119,48 @@ class ClanBattle():
         # value_input_option='USER_ENTERED' を入れることで、スプシの関数をそのまま埋め込むことができる
         ws.update_cells(cell_list, value_input_option='USER_ENTERED')
 
-    def finish_attack(self, user_id, damage):
+    def attack_check(self, user_id):
+        cm = Common.Common()
+        ws = cm.get_gsfile('attack_log')
+        df = cm.create_gsdf(ws)
+
+        # @をつけると変数を埋め込むことができる
+        if len(df.query("user_id == @user_id & damage == 0")):
+            return 1
+        else:
+            return 0
+
+    def attack_cancel(self, user_id):
+        cm = Common.Common()
+        ws = cm.get_gsfile('attack_log')
+        df = cm.create_gsdf(ws)
+
+        #queryで取得した結果の末尾のレコードを削除する
+        df.drop(index=df.query("user_id == @user_id & damage == 0").index[-1], inplace=True)
+        col_lastnum = len(df.columns)
+        row_lastnum = len(df.index)
+
+        self.sheet_clear('attack_log')
+        cell_list = ws.range('A2:'+cm.toAlpha(col_lastnum)+str(row_lastnum + 1))
+        for cell in cell_list:
+            val = df.iloc[cell.row - 2][cell.col - 1]
+            cell.value = val
+
+        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
+
+    def get_attack_count(self):
+        cm = Common.Common()
+        ws = cm.get_gsfile('attack_log')
+        df = cm.create_gsdf(ws)
+
+        #queryで取得した結果の末尾のレコードを削除する
+        return len(df.query("is_carry_over == 0"))
+
+
+    def update_current_boss(self, damage):
         '''
-        ダメージ情報を更新
+        current_bossの情報を更新する。
+        もし、撃破した場合は、その返り値を返す。
         '''
         is_carry_over = 0
 
@@ -116,7 +192,13 @@ class ClanBattle():
 
             ws.update_cells(cell_list, value_input_option='USER_ENTERED')
 
+        return is_carry_over
 
+
+    def finish_attack(self, user_id, damage, is_carry_over):
+        '''
+        ダメージ情報を更新
+        '''
         cm = Common.Common()
         ws = cm.get_gsfile('attack_log')
         df = cm.create_gsdf(ws)
@@ -139,24 +221,30 @@ class ClanBattle():
         ws.update_cells(cell_list, value_input_option='USER_ENTERED')
 
 
-        # 凸予約していた場合、凸したフラグを立てる
-        if self.reserved_check(user_id, boss_num):
-            self.reserved_clear(user_id, boss_num)
-
-
-    def reserved_check(self, user_id, boss_num):
+    def reserved_check(self, user_id, boss_num=None):
         cm = Common.Common()
         ws = cm.get_gsfile('boss_reserve')
         df = cm.create_gsdf(ws)
 
+        if boss_num is None:
+            w = "user_id == @user_id & is_attack == 0"
+        else:
+            w = "user_id == @user_id & boss_number == @boss_num & is_attack == 0" 
+
         # @をつけると変数を埋め込むことができる
-        if len(df.query("user_id == @user_id & boss_number == @boss_num & is_attack == 0")):
+        if len(df.query(w)):
             return 1
         else:
             return 0
 
+    def get_reserved_users(self, boss_num):
+        cm = Common.Common()
+        ws = cm.get_gsfile('boss_reserve')
+        df = cm.create_gsdf(ws)
 
-    def reserved_clear(self, user_id, boss_num):
+        return df.query("boss_number == @boss_num & is_attack == 0").user_id.tolist()
+
+    def reserved_clear(self, user_id, boss_num=None):
         cm = Common.Common()
         ws = cm.get_gsfile('boss_reserve')
         df = cm.create_gsdf(ws)
@@ -211,14 +299,16 @@ class ClanBattle():
 
 if __name__ == '__main__':
     cb = ClanBattle()
-    #cb.boss_reserve('2019/08', '478542546537283594', 5)
+    #cb.boss_reserve('478542546537283594', 5)
+    #cb.all_clear()
     #cb.attack('478542546537283594')
     #cb.finish_attack('478542546537283594', 12000000)
     #cb.lotate_boss()
-    a, b, c = cb.get_current_boss()
-    print (a)
-    print (b)
-    print (c)
+    #cb.get_reserved_users(6)
+    #a, b, c = cb.get_current_boss()
+    #cb.reserved_check('474761974832431148', 3)
+    #cb.attack_cancel('474761974832431148')
+    cb.get_attack_count()
 
 
 
