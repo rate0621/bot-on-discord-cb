@@ -307,19 +307,10 @@ class Actions:
             self.res_type = 'emoji'
             self.res      = ['you:478527842855026698', 'jo:478527811296952330']
 
-        ## 507788854418210826 ペコ
-        if re.match('507788854418210826', req.author.id):
-            self.res_type = 'emoji'
-            self.res      = ['tuho:478871148134924309']
-
-        return self.res_type, self.res
-
-        if re.match('454636015785869313', req.author.id):
-            self.res_type = 'text'
-            self.res      = '(´^ω^｀)ﾌﾞﾌｫwww'
-
-            return self.res_type, self.res
-
+            ## 507788854418210826 ペコ
+            if re.match('507788854418210826', req.author.id):
+                self.res_type = 'emoji'
+                self.res      = ['tuho:478871148134924309']
 
         return self.res_type, self.res
 
