@@ -105,6 +105,10 @@ class Common():
 
         return df
 
+    def excel_date(self, num):
+        from datetime import datetime, timedelta
+        return(datetime(1899, 12, 30) + timedelta(days=num))
+
 
 
 

@@ -57,6 +57,7 @@ class Actions:
 
         # クラバト関連のアクションはここ
         if req.channel.id == '624522174769659915':
+        #if req.channel.id == '624240053563949061':
             if re.search("^凸$", req.content):
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'

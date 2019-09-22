@@ -1,7 +1,8 @@
 import os, sys
 import sqlite3
 import pandas as pd
-from datetime import datetime
+import numpy as np
+from datetime import datetime, timedelta
 
 import Common
 
@@ -10,6 +11,16 @@ import Common
 class ClanBattle():
     def __init__(self):
         pass
+
+    def get_today_from_and_to(self):
+        today = datetime.now() - timedelta(hours=5)
+        tomorrow = today + timedelta(days=1)
+        #f = today.strftime("%Y/%m/%d 05:00:00")
+        #t = tomorrow.strftime("%Y/%m/%d 04:59:00")
+        #return f, t
+        return today, tomorrow
+
+
 
     def all_clear(self):
         '''
@@ -153,8 +164,14 @@ class ClanBattle():
         ws = cm.get_gsfile('attack_log')
         df = cm.create_gsdf(ws)
 
+        # スプシからデータを取得すると数値になってしまうため変換する
+        df['datetime'] = df['datetime'].map(cm.excel_date)
+        df['datetime'] = pd.to_datetime(df['datetime'])
+
+        f, t = self.get_today_from_and_to()
+
         #queryで取得した結果の末尾のレコードを削除する
-        return len(df.query("is_carry_over == 0"))
+        return len(df[(df.datetime >= f) & (df.datetime <= t) & (df.is_carry_over == 0)])
 
 
     def update_current_boss(self, damage):
@@ -308,7 +325,8 @@ if __name__ == '__main__':
     #a, b, c = cb.get_current_boss()
     #cb.reserved_check('474761974832431148', 3)
     #cb.attack_cancel('474761974832431148')
-    cb.get_attack_count()
+    print (cb.get_attack_count())
+    #cb.get_today_from_and_to()
 
 
 
