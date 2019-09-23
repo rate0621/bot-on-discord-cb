@@ -15,10 +15,9 @@ class ClanBattle():
     def get_today_from_and_to(self):
         today = datetime.now() - timedelta(hours=5)
         tomorrow = today + timedelta(days=1)
-        #f = today.strftime("%Y/%m/%d 05:00:00")
-        #t = tomorrow.strftime("%Y/%m/%d 04:59:00")
-        #return f, t
-        return today, tomorrow
+        f = today.strftime("%Y/%m/%d 05:00:00")
+        t = tomorrow.strftime("%Y/%m/%d 04:59:00")
+        return f, t
 
 
 
