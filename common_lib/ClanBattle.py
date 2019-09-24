@@ -147,6 +147,11 @@ class ClanBattle():
 
         #queryで取得した結果の末尾のレコードを削除する
         df.drop(index=df.query("user_id == @user_id & damage == 0").index[-1], inplace=True)
+
+        # スプシからデータを取得すると数値になってしまうため変換する
+        df['datetime'] = df['datetime'].map(cm.excel_date)
+        df['datetime'] = df['datetime'].astype(str)
+
         col_lastnum = len(df.columns)
         row_lastnum = len(df.index)
 
@@ -317,14 +322,14 @@ if __name__ == '__main__':
     cb = ClanBattle()
     #cb.boss_reserve('478542546537283594', 5)
     #cb.all_clear()
-    #cb.attack('478542546537283594')
+    cb.attack('474761974832431148')
+    cb.attack_cancel('474761974832431148')
     #cb.finish_attack('478542546537283594', 12000000)
     #cb.lotate_boss()
     #cb.get_reserved_users(6)
     #a, b, c = cb.get_current_boss()
     #cb.reserved_check('474761974832431148', 3)
-    #cb.attack_cancel('474761974832431148')
-    print (cb.get_attack_count())
+    #print (cb.get_attack_count())
     #cb.get_today_from_and_to()
 
 
