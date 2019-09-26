@@ -32,7 +32,7 @@ CLANBATTLE_HELP = '''
     予約したあとにやっぱりキャンセルしたくなったらこれで。
     凸宣言のキャンセルと間違わないように。
 
-### 予約確認　「予約確認　1」（確認したいボスの番号）
+### 予約確認
     誰々が予約しているかが表示される。
 
 ### 凸数確認　「凸数確認」
@@ -131,27 +131,31 @@ class Actions:
                     
                 return self.res_type, self.res
 
-            if re.search("^予約確認\s+\d+$", req.content):
+            if re.search("^予約確認$", req.content):
                 cb = ClanBattle.ClanBattle()
-                m = re.search("^予約確認\s+(\d+)$", req.content)
+                #m = re.search("^予約確認\s+(\d+)$", req.content)
                 
-                boss_number = m.group(1)
+                #boss_number = m.group(1)
                 # 半角に置換
-                boss_number =boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
-                user_list = cb.get_reserved_users(int(boss_number))
-                reservers = ''
-                if not user_list == []:
-                    for u in user_list:
-                        reservers += req.server.get_member(u).name + "\n"
+                #boss_number =boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
 
-                    self.res_type = 'text'
-                    self.res      = reservers
-                else:
-                    self.res_type = 'text'
-                    self.res      = '誰も予約していないわ。狙い目よ。'
+                b_df      = cb.get_bosses()
+                user_dict = cb.get_all_reserved_users(b_df)
 
+                message = "予約状況はこんな感じね。\n```\n"
+                for k in user_dict:
+                    message += "【" + str(k) + "】\n"
+                    for i, u in enumerate(user_dict[k]):
+                        message += "    " + req.server.get_member(u).name + "\n"
+
+                
+                message += "```"
+
+                self.res_type = 'text'
+                self.res      = message
 
                 return self.res_type, self.res
+
 
             if re.search("^凸キャンセル$", req.content):
                 cb = ClanBattle.ClanBattle()

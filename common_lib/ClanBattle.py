@@ -57,7 +57,11 @@ class ClanBattle():
 
 
     def get_bosses(self):
-        ws = self.get_gsfile('boss_master')
+        cm = Common.Common()
+        ws = cm.get_gsfile('boss_master')
+        df = cm.create_gsdf(ws)
+
+        return df[['boss_number', 'boss_name']].values
 
 
     def boss_reserve(self, user_id, boss_num):
@@ -265,6 +269,20 @@ class ClanBattle():
 
         return df.query("boss_number == @boss_num & is_attack == 0").user_id.tolist()
 
+
+    def get_all_reserved_users(self, boss_array):
+        cm = Common.Common()
+        ws = cm.get_gsfile('boss_reserve')
+        df = cm.create_gsdf(ws)
+
+        dic = {}
+        for boss in boss_array:
+            dic.setdefault(boss[0], [])
+            for u in df.query("boss_number == @boss[0] & is_attack == 0").user_id.tolist():
+                dic.setdefault(boss[0], []).append(u)
+
+        return dic
+
     def reserved_clear(self, user_id, boss_num=None):
         cm = Common.Common()
         ws = cm.get_gsfile('boss_reserve')
@@ -322,11 +340,12 @@ if __name__ == '__main__':
     cb = ClanBattle()
     #cb.boss_reserve('478542546537283594', 5)
     #cb.all_clear()
-    cb.attack('474761974832431148')
-    cb.attack_cancel('474761974832431148')
+    #cb.attack('474761974832431148')
+    #cb.attack_cancel('474761974832431148')
     #cb.finish_attack('478542546537283594', 12000000)
     #cb.lotate_boss()
-    #cb.get_reserved_users(6)
+    a = cb.get_bosses()
+    cb.get_reserved_users(a)
     #a, b, c = cb.get_current_boss()
     #cb.reserved_check('474761974832431148', 3)
     #print (cb.get_attack_count())

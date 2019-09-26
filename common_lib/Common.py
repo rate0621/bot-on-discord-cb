@@ -92,13 +92,13 @@ class Common():
         return ws
 
 
-    def create_gsdf(self, ws):
+    def create_gsdf(self, ws, value_render_option='FORMULA'):
         '''
         渡されたワークシートをDataFrameに変換し、DF型にして返す。
         '''
 
         # 本来get_all_valuesにvalue_render_optionのオプションは存在しない(gspread==3.0.1)
-        df = pd.DataFrame(ws.get_all_values(value_render_option='FORMULA'))
+        df = pd.DataFrame(ws.get_all_values(value_render_option=value_render_option))
         df.columns =  list(df.iloc[0])
         df = df.drop(0, axis=0)
         df = df.reset_index(drop=True)
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     #print(img_url)
 
     ws = common.get_gsfile('boss_reserve')
-    df = common.create_gsdf(ws)
+    df = common.create_gsdf(ws, value_render_option='FORMATTED_VALUE')
     print (df)
     #SPREADSHEET_KEY = os.getenv("SPREADSHEET_KEY", "")
     #worksheet = gc.open_by_key(SPREADSHEET_KEY).sheet1
