@@ -291,6 +291,7 @@ class ClanBattle():
         if boss_num is None:
             df.loc[(df.user_id == user_id) & (df.is_attack == 0), 'is_attack'] = 1
         else:
+            boss_num = int(boss_num)
             df.loc[(df.user_id == user_id) & (df.is_attack == 0) & (df.boss_number == boss_num), 'is_attack'] = 1
 
         col_lastnum = len(df.columns)
