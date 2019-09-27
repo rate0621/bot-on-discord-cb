@@ -111,7 +111,7 @@ class Actions:
                 
                 boss_number = m.group(1)
                 # 半角に置換
-                boss_number =boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+                boss_number = boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
                 cb.boss_reserve(str(req.author.id), int(boss_number))
 
                 self.res_type = 'text'
@@ -119,15 +119,23 @@ class Actions:
 
                 return self.res_type, self.res
 
-            if re.search("^凸予約キャンセル$", req.content):
+            if (re.search("^凸予約キャンセル$", req.content) or re.search("^凸予約キャンセル\s+\d+$", req.content)):
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
-                if cb.reserved_check(str(req.author.id)):
-                    cb.reserved_clear(str(req.author.id))
+
+                m = re.search("^凸予約キャンセル\s+(\d+)$", req.content)
+                if m:
+                    boss_number = m.group(1)
+                    boss_number = boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+                else:
+                    boss_number = None
+
+                if cb.reserved_check(str(req.author.id), boss_number):
+                    cb.reserved_clear(str(req.author.id), boss_number)
                     self.res = '予約キャンセルしておいたわよ'
 
                 else:
-                    self.res = 'あなた何も予約していないわよ。寝ぼけてるの？'
+                    self.res = 'あなた予約していないわよ。寝ぼけてるの？'
                     
                 return self.res_type, self.res
 

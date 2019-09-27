@@ -254,6 +254,7 @@ class ClanBattle():
         if boss_num is None:
             w = "user_id == @user_id & is_attack == 0"
         else:
+            boss_num = int(boss_num)
             w = "user_id == @user_id & boss_number == @boss_num & is_attack == 0" 
 
         # @をつけると変数を埋め込むことができる
@@ -287,7 +288,10 @@ class ClanBattle():
         cm = Common.Common()
         ws = cm.get_gsfile('boss_reserve')
         df = cm.create_gsdf(ws)
-        df.loc[(df.user_id == user_id) & (df.is_attack == 0), 'is_attack'] = 1
+        if boss_num is None:
+            df.loc[(df.user_id == user_id) & (df.is_attack == 0), 'is_attack'] = 1
+        else:
+            df.loc[(df.user_id == user_id) & (df.is_attack == 0) & (df.boss_number == boss_num), 'is_attack'] = 1
 
         col_lastnum = len(df.columns)
         row_lastnum = len(df.index)
