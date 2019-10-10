@@ -50,11 +50,11 @@ class Common():
         #2つのAPIを記述しないとリフレッシュトークンを3600秒毎に発行し続けなければならない
         scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
 
-        TYPE           = os.getenv("GS_TYPE", "")
-        CLIENT_EMAIL   = os.getenv("GS_CLIENT_EMAIL", "")
-        PRIVATE_KEY    = os.getenv("GS_PRIVATE_KEY", "")
+        TYPE           = os.getenv("GS_TYPE",           "")
+        CLIENT_EMAIL   = os.getenv("GS_CLIENT_EMAIL",   "")
+        PRIVATE_KEY    = os.getenv("GS_PRIVATE_KEY",    "")
         PRIVATE_KEY_ID = os.getenv("GS_PRIVATE_KEY_ID", "")
-        CLIENT_ID      = os.getenv("GS_CLIENT_ID", "")
+        CLIENT_ID      = os.getenv("GS_CLIENT_ID",      "")
 
         key_dict = {
           'type'          : TYPE,
@@ -104,6 +104,19 @@ class Common():
         df = df.reset_index(drop=True)
 
         return df
+
+    def check_sheet_exists_and_create(self, check_sheet_title):
+        wb = self.get_workbook()
+        worksheets = wb.worksheets()
+        is_exists = False
+
+        for sheet in worksheets:
+            if check_sheet_title == sheet.title:
+                is_exists = True
+                break
+
+        if not is_exists:
+            wb.add_worksheet(title=check_sheet_title, rows=5000, cols=26)
 
     def excel_date(self, num):
         from datetime import datetime, timedelta

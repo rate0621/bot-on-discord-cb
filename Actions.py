@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 import discord
 import gspread
 
-import common_lib.Common     as Common
 import common_lib.ClanBattle as ClanBattle
 
 CLANBATTLE_HELP = '''
@@ -19,16 +18,20 @@ CLANBATTLE_HELP = '''
     事前に凸予約していた場合、完了報告することで自動でキャンセルされる。
     数字は全角でも半角でもOK。
 
+### 持ち越し宣言　「持ち越し　70」
+    ボスを〆たら持ち越し時間を教えてあげてください。
+    その状態でボスを予約すると、予約確認時に持ち越し秒数が表示されて幸せになれます。
+
 ### 凸キャンセル　「凸キャンセル」
     凸宣言をキャンセルする。
 
-### 凸予約　「凸予約　1」(予約したいボスの番号１〜５)
+### 予約　「予約　1」(予約したいボスの番号１〜５)
     予約したいボスがいるならこれで。
     予約しておけば、そのボスが回ってきたときにbotがメンションを飛ばしてくれます。
 
     多分何件でも予約できるけど良識の範囲内で。
 
-### 凸予約キャンセル　「凸予約キャンセル」
+### 予約キャンセル　「凸予約キャンセル」
     予約したあとにやっぱりキャンセルしたくなったらこれで。
     凸宣言のキャンセルと間違わないように。
 
@@ -105,9 +108,9 @@ class Actions:
 
                 return self.res_type, self.res
 
-            if re.search("^凸予約\s+\d+$", req.content):
+            if re.search("^予約\s+\d+$", req.content):
                 cb = ClanBattle.ClanBattle()
-                m = re.search("^凸予約\s+(\d+)$", req.content)
+                m = re.search("^予約\s+(\d+)$", req.content)
                 
                 boss_number = m.group(1)
                 # 半角に置換
@@ -119,11 +122,11 @@ class Actions:
 
                 return self.res_type, self.res
 
-            if (re.search("^凸予約キャンセル$", req.content) or re.search("^凸予約キャンセル\s+\d+$", req.content)):
+            if (re.search("^予約キャンセル$", req.content) or re.search("^予約キャンセル\s+\d+$", req.content)):
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
 
-                m = re.search("^凸予約キャンセル\s+(\d+)$", req.content)
+                m = re.search("^予約キャンセル\s+(\d+)$", req.content)
                 if m:
                     boss_number = m.group(1)
                     boss_number = boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
@@ -141,22 +144,26 @@ class Actions:
 
             if re.search("^予約確認$", req.content):
                 cb = ClanBattle.ClanBattle()
-                #m = re.search("^予約確認\s+(\d+)$", req.content)
                 
-                #boss_number = m.group(1)
-                # 半角に置換
-                #boss_number =boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
-
-                b_df      = cb.get_bosses()
-                user_dict = cb.get_all_reserved_users(b_df)
+                co_users_df = cb.get_carry_over_users()
+                b_df        = cb.get_bosses()
+                user_dict   = cb.get_all_reserved_users(b_df)
+                boss_num, boss_name, boss_hp = cb.get_current_boss()
 
                 message = "予約状況はこんな感じね。\n```\n"
-                for k in user_dict:
-                    message += "【" + str(k) + "】\n"
-                    for i, u in enumerate(user_dict[k]):
-                        message += "    " + req.server.get_member(u).name + "\n"
+                for k, b in zip(user_dict, b_df):
+                    if k == boss_num:
+                        message += "【" + str(k) + "】(目安:" + str(b[2]) + ")" + " ←イマココ(残り、" + str(boss_hp) + ") \n"
+                    else:
+                        message += "【" + str(k) + "】(目安:" + str(b[2]) + ")\n"
 
-                
+                    for i, u in enumerate(user_dict[k]):
+                        if (u in co_users_df.index):
+                            message += "    " + req.server.get_member(u).name + "  (持ち越し:" + str(co_users_df.at[u, 'time']) + ")" + "\n"
+                        else:
+                            message += "    " + req.server.get_member(u).name + "\n"
+
+                message += "残り凸数は、" + str(cb.get_remaining_atc_count()) + "よ。\n"
                 message += "```"
 
                 self.res_type = 'text'
