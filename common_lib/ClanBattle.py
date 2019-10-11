@@ -14,10 +14,10 @@ class ClanBattle():
     def __init__(self):
 
         args = {
-            "host"    : "localhost",
-            "user"    : "root",
-            "passwd"  : "",
-            "db"      : "clanbattle",
+            "host"   : os.getenv("DB_HOST", ""),
+            "user"   : os.getenv("DB_USER", ""),
+            "passwd" : os.getenv("DB_PASS", ""),
+            "db"     : os.getenv("DB_NAME", ""),
         }
 
         self.conn = MySQLdb.connect(**args)
@@ -62,7 +62,7 @@ class ClanBattle():
             print ('予約します')
 
             cur = self.conn.cursor()
-            cur.execute("INSERT INTO boss_reserve (reserved_at, user_id, boss_number, is_attack) VALUES (%s, %s, %s, %s)", (_datetime, user_id, boss_num, 0))
+            cur.execute("INSERT INTO boss_reserve (reserved_at, user_id, boss_number, is_attack, is_cancel) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, 0))
 
             self.conn.commit()
             print ('予約完了')
@@ -72,35 +72,46 @@ class ClanBattle():
         cur = self.conn.cursor()
 
         if boss_num is None:
-            cur.execute("SELECT * FROM boss_reserve WHERE user_id = %s AND is_attack = 0", (user_id,))
+            cur.execute("SELECT * FROM boss_reserve WHERE user_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id,))
         else:
             boss_num = int(boss_num)
-            cur.execute("SELECT * FROM boss_reserve WHERE user_id = %s AND boss_number = %s AND is_attack = 0", (user_id, boss_num))
+            cur.execute("SELECT * FROM boss_reserve WHERE user_id = %s AND boss_number = %s AND is_attack = 0 AND is_cancel = 0", (user_id, boss_num))
 
         if cur.rowcount > 0:
             return True
         else:
             return False
 
+    def reserved_clear(self, user_id, boss_num):
+        '''
+        予約していたユーザが凸し終わったときの処理
+        '''
+        cur = self.conn.cursor()
+        cur.execute("UPDATE boss_reserve SET is_attack = 1 WHERE user_id = %s AND boss_number = %s AND is_cancel = 0", (user_id, boss_num))
+        self.conn.commit()
 
-    def reserved_clear(self, user_id, boss_num=None):
+
+    def reserved_cancel(self, user_id, boss_num=None):
+        '''
+        ユーザが凸キャンセルしたときの処理
+        '''
         cur = self.conn.cursor()
 
         if boss_num is None:
-            cur.execute("DELETE FROM boss_reserve WHERE user_id = %s", (user_id,))
+            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE user_id = %s  AND is_attack = 0", (user_id,))
         else:
-            cur.execute("DELETE FROM boss_reserve WHERE user_id = %s AND boss_number = %s", (user_id, boss_num))
+            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE user_id = %s AND boss_number = %s AND is_attack = 0", (user_id, boss_num))
 
         self.conn.commit()
 
     def get_reserved_users(self, boss_num):
         cur = self.conn.cursor()
-        cur.execute("SELECT br.user_id, cm.user_name FROM boss_reserve br INNER JOIN clan_members cm ON br.user_id = cm.user_id WHERE boss_number = %s AND is_attack = 0", (boss_num,))
+        cur.execute("SELECT br.user_id, cm.user_name FROM boss_reserve br INNER JOIN clan_members cm ON br.user_id = cm.user_id WHERE boss_number = %s AND is_attack = 0 AND is_cancel = 0", (boss_num,))
 
         l = []
         rows = cur.fetchall()
         for row in rows:
-            l.append(row[1])
+            l.append({'user_id': row[0], 'user_name': row[1]})
 
         return l
 
@@ -112,7 +123,7 @@ class ClanBattle():
         for boss in boss_array:
             dic.setdefault(boss['boss_number'], [])
             for u in self.get_reserved_users(boss['boss_number']):
-                dic.setdefault(boss['boss_number'], []).append(u)
+                dic.setdefault(boss['boss_number'], []).append(u['user_name'])
 
         return dic
 
@@ -202,7 +213,26 @@ class ClanBattle():
 
         rows = cur.fetchall()
 
-        return rows
+        dic = {}
+        for row in rows:
+            dic.setdefault(row[0], {'attacked_boss': row[1], 'time': row[2]})
+
+        return dic
+
+    def check_carry_over(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM carry_over WHERE user_id = %s AND is_attack = 0", (user_id,))
+
+        if cur.rowcount > 0:
+            return True
+        else:
+            return False
+
+
+    def finish_carry_over(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute("UPDATE carry_over SET is_attack = 1 WHERE user_id = %s AND is_attack = 0", (user_id,))
+        self.conn.commit()
 
 
     def get_remaining_atc_count(self):
@@ -232,9 +262,10 @@ class ClanBattle():
         
 
     def insert_carry_over(self, user_id, boss_num, time):
+        print ('持ち越し入れます')
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO carry_over (carried_at, user_id, boss_number, time) VALUES (%s, %s, %s, %s)", (_datetime, user_id, boss_num, time))
+        cur.execute("INSERT INTO carry_over (carried_at, user_id, boss_number, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
 
         self.conn.commit()
 
@@ -242,7 +273,8 @@ class ClanBattle():
 if __name__ == '__main__':
     cb = ClanBattle()
     #user_id = '474761974832431148'
-    user_id =  '478542546537283594'
+    #user_id =  '478542546537283594'
+    user_id =  '523048909833109504'
     boss_num = 2
     time = 50
     damage = 5000000
@@ -274,6 +306,7 @@ if __name__ == '__main__':
 
     #print (cb.get_remaining_atc_count())
 
-    cb.insert_carry_over(user_id, boss_num, time)
+    #cb.insert_carry_over(user_id, boss_num, time)
+    #cb.get_carry_over_users()
 
 

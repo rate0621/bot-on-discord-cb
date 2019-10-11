@@ -61,8 +61,8 @@ class Actions:
                 if cb.attack_check(str(req.author.id)):
                     self.res = 'すでに凸宣言済みのようね。'
                 else:
-                    boss_num, boss_name, boss_hp = cb.get_current_boss()
-                    self.res = req.author.name + 'が' + boss_name + 'に凸するわ。自分を信じていってらっしゃい。'
+                    cb_dict = cb.get_current_boss()
+                    self.res = req.author.name + 'が' + cb_dict['boss_name'] + 'に凸するわ。自分を信じていってらっしゃい。'
 
                     cb.attack(req.author.id)
 
@@ -78,26 +78,30 @@ class Actions:
                     damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
 
                     # ボスが撃破される前に情報を取得
-                    boss_num, boss_name, boss_hp = cb.get_current_boss()
+                    cb_dict = cb.get_current_boss()
 
                     # 凸予約していた場合、凸したフラグを立てる
-                    if cb.reserved_check(str(req.author.id), boss_num):
-                        cb.reserved_clear(str(req.author.id), boss_num)
+                    if cb.reserved_check(str(req.author.id), cb_dict['boss_number']):
+                        cb.reserved_clear(str(req.author.id), cb_dict['boss_number'])
+
+                    # 持ち越しで叩いた場合、フラグをたてる
+                    if cb.check_carry_over(str(req.author.id)):
+                        cb.finish_carry_over(str(req.author.id))
 
                     is_defeat = cb.update_current_boss(int(damage))
-                    boss_num, boss_name, boss_hp = cb.get_current_boss()
+                    cb_dict = cb.get_current_boss()
 
                     suf_message = ''
                     if is_defeat:
-                        user_list = cb.get_reserved_users(boss_num)
-                        call_message = boss_name + "の時間よー！\n"
+                        user_list = cb.get_reserved_users(cb_dict['boss_number'])
+                        call_message = cb_dict['boss_name'] + "の時間よー！\n"
                         if not user_list == []:
                             for u in user_list:
-                                call_message += req.server.get_member(u).mention
+                                call_message += req.server.get_member(u['user_id']).mention
 
                         suf_message = call_message
                     else:
-                        suf_message = boss_name + '残り' + str(boss_hp) + 'よ。'
+                        suf_message = cb_dict['boss_name'] + '残り' + str(cb_dict['hit_point']) + 'よ。'
 
                     cb.finish_attack(str(req.author.id), int(damage), is_defeat)
 
@@ -134,7 +138,7 @@ class Actions:
                     boss_number = None
 
                 if cb.reserved_check(str(req.author.id), boss_number):
-                    cb.reserved_clear(str(req.author.id), boss_number)
+                    cb.reserved_cancel(str(req.author.id), boss_number)
                     self.res = '予約キャンセルしておいたわよ'
 
                 else:
@@ -145,23 +149,23 @@ class Actions:
             if re.search("^予約確認$", req.content):
                 cb = ClanBattle.ClanBattle()
                 
-                co_users_df = cb.get_carry_over_users()
-                b_df        = cb.get_bosses()
-                user_dict   = cb.get_all_reserved_users(b_df)
-                boss_num, boss_name, boss_hp = cb.get_current_boss()
+                co_users = cb.get_carry_over_users()
+                b_array     = cb.get_bosses()
+                user_dict   = cb.get_all_reserved_users()
+                cb_dict     = cb.get_current_boss()
 
                 message = "予約状況はこんな感じね。\n```\n"
-                for k, b in zip(user_dict, b_df):
-                    if k == boss_num:
-                        message += "【" + str(k) + "】(目安:" + str(b[2]) + ")" + " ←イマココ(残り、" + str(boss_hp) + ") \n"
+                for k, b in zip(user_dict, b_array):
+                    if k == cb_dict['boss_number']:
+                        message += "【" + str(k) + "】(目安:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
                     else:
-                        message += "【" + str(k) + "】(目安:" + str(b[2]) + ")\n"
+                        message += "【" + str(k) + "】(目安:" + str(b['target']) + ")\n"
 
                     for i, u in enumerate(user_dict[k]):
-                        if (u in co_users_df.index):
-                            message += "    " + req.server.get_member(u).name + "  (持ち越し:" + str(co_users_df.at[u, 'time']) + ")" + "\n"
+                        if (u in co_users):
+                            message += "    " + u + "  (持ち越し:" + str(co_users[u]['time']) + "秒)" + "\n"
                         else:
-                            message += "    " + req.server.get_member(u).name + "\n"
+                            message += "    " + u + "\n"
 
                 message += "残り凸数は、" + str(cb.get_remaining_atc_count()) + "よ。\n"
                 message += "```"
@@ -192,6 +196,25 @@ class Actions:
 
                 self.res_type = 'text'
                 self.res      = mes
+
+                return self.res_type, self.res
+                    
+            if re.search("^持ち越し\s+\d+$", req.content):
+                cb = ClanBattle.ClanBattle()
+                m = re.search("^持ち越し\s+(\d+)$", req.content)
+                time = m.group(1)
+                # 半角に置換
+                time = time.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
+                cb_dict = cb.get_current_boss()
+                last_boss_number = cb_dict['boss_number'] - 1
+                if last_boss_number == 0:
+                    last_boss_number = 5
+
+                cb.insert_carry_over(str(req.author.id), last_boss_number, int(time))
+
+                self.res_type = 'text'
+                self.res      = '持ち越し時間把握したわ。吐く場所はしっかり考えておくのよ。'
 
                 return self.res_type, self.res
                     

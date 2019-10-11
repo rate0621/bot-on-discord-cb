@@ -58,13 +58,14 @@ class ManageActions:
 #
 #            ws.update_cells(cell_list)
 
-        args = {
-            "host": "localhost",
-            "db"      : "clanbattle",
-            "user"    : "root",
-            "passwd"  : ""
-        }
 
+        args = {
+            "host"   : os.getenv("DB_HOST", ""),
+            "user"   : os.getenv("DB_USER", ""),
+            "passwd" : os.getenv("DB_PASS", ""),
+            "db"     : os.getenv("DB_NAME", ""),
+        }
+        
         with closing(MySQLdb.connect(**args)) as conn:
             cur = conn.cursor()
             cur.execute("TRUNCATE TABLE clan_members")
