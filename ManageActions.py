@@ -60,10 +60,11 @@ class ManageActions:
 
 
         args = {
-            "host"   : os.getenv("DB_HOST", ""),
-            "user"   : os.getenv("DB_USER", ""),
-            "passwd" : os.getenv("DB_PASS", ""),
-            "db"     : os.getenv("DB_NAME", ""),
+            "host"    : os.getenv("DB_HOST", ""),
+            "user"    : os.getenv("DB_USER", ""),
+            "passwd"  : os.getenv("DB_PASS", ""),
+            "db"      : os.getenv("DB_NAME", ""),
+            "charset" : os.getenv("DB_CHARSET", ""),
         }
         
         with closing(MySQLdb.connect(**args)) as conn:

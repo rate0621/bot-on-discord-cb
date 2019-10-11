@@ -18,6 +18,7 @@ class ClanBattle():
             "user"   : os.getenv("DB_USER", ""),
             "passwd" : os.getenv("DB_PASS", ""),
             "db"     : os.getenv("DB_NAME", ""),
+            "charset" : os.getenv("DB_CHARSET", ""),
         }
 
         self.conn = MySQLdb.connect(**args)
