@@ -270,6 +270,57 @@ class ClanBattle():
 
         self.conn.commit()
 
+    def get_today_members_attack_count(self):
+        f, t = self.get_today_from_and_to()
+        cur = self.conn.cursor()
+        cur.execute(" \
+            SELECT \
+                cm.user_id, \
+                cm.user_name, \
+                IFNULL(ac.attack_count, 0) AS attack_count \
+            FROM \
+                clan_members cm \
+            LEFT JOIN( \
+                SELECT \
+                    user_id, \
+                    COUNT(user_id) attack_count \
+                FROM \
+                    attack_log \
+                WHERE \
+                    is_carry_over = 0 \
+                    AND \
+                    attack_time BETWEEN %s AND %s \
+                GROUP BY \
+                    user_id \
+            ) ac \
+            ON cm.user_id = ac.user_id \
+            WHERE \
+                cm.is_member = 1 \
+        ", (f, t))
+
+        rows = cur.fetchall()
+        dic = {}
+        for row in rows:
+            dic.setdefault(row[0], {'user_name': row[1], 'attack_count': row[2]})
+        
+        return dic
+
+    def get_three_attack_members(self, ma_dic):
+        m_array = []
+        for user_id in ma_dic:
+            if ma_dic[user_id]['attack_count'] == 3:
+                m_array.append(ma_dic[user_id]['user_name'])
+
+        return m_array
+
+    def get_not_three_attack_members(self, ma_dic):
+        m_array = []
+        for user_id in ma_dic:
+            if ma_dic[user_id]['attack_count'] < 3:
+                m_array.append(ma_dic[user_id]['user_name'] + '  残り:' + str(ma_dic[user_id]['attack_count']))
+
+        return m_array
+
 
 if __name__ == '__main__':
     cb = ClanBattle()
@@ -281,6 +332,11 @@ if __name__ == '__main__':
     damage = 5000000
 
     #print (cb.get_bosses())
+    member_attack_dic    = cb.get_today_members_attack_count()
+    three_attack_members = cb.get_three_attack_members(member_attack_dic)
+    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+    print (three_attack_members)
+    print (not_three_attack_members)
  
     #cb.boss_reserve(user_id, 5)
     #print (cb.reserved_check(user_id))

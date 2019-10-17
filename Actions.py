@@ -218,6 +218,35 @@ class Actions:
 
                 return self.res_type, self.res
                     
+            if re.search("^完凸チェック$", req.content):
+                cb = ClanBattle.ClanBattle()
+                member_attack_dic = cb.get_today_members_attack_count()
+                three_attack_members = cb.get_three_attack_members(member_attack_dic)
+
+                message = "今日完凸してるメンバーは以下よ\n```\n"
+                for m in three_attack_members:
+                    message += m + "\n"
+
+                message += '```'
+
+                self.res_type = 'text'
+                self.res      = message
+
+            if re.search("^未完凸チェック$", req.content):
+                cb = ClanBattle.ClanBattle()
+                member_attack_dic = cb.get_today_members_attack_count()
+                not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+
+                message = "今日まだ未完凸のメンバーは以下よ\n```\n"
+                for m in not_three_attack_members:
+                    message += m + "\n"
+
+                message += '```'
+
+                self.res_type = 'text'
+                self.res      = message
+
+
 
             if re.search("^ヘルプ$", req.content):
                 self.res_type = 'text'
