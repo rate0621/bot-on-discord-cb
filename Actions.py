@@ -81,8 +81,8 @@ class Actions:
                     cb_dict = cb.get_current_boss()
 
                     # 凸予約していた場合、凸したフラグを立てる
-                    if cb.reserved_check(str(req.author.id), cb_dict['boss_number']):
-                        cb.reserved_clear(str(req.author.id), cb_dict['boss_number'])
+                    if cb.reserved_check(str(req.author.id), cb_dict['boss_id']):
+                        cb.reserved_clear(str(req.author.id), cb_dict['boss_id'])
 
                     # 持ち越しで叩いた場合、フラグをたてる
                     if cb.check_carry_over(str(req.author.id)):
@@ -93,11 +93,11 @@ class Actions:
 
                     suf_message = ''
                     if is_defeat:
-                        user_list = cb.get_reserved_users(cb_dict['boss_number'])
+                        user_list = cb.get_reserved_users(cb_dict['boss_id'])
                         call_message = cb_dict['boss_name'] + "の時間よー！\n"
                         if not user_list == []:
                             for u in user_list:
-                                call_message += req.server.get_member(u['user_id']).mention
+                                call_message += req.server.get_member(u['member_id']).mention
 
                         suf_message = call_message
                     else:
@@ -156,7 +156,7 @@ class Actions:
 
                 message = "予約状況はこんな感じね。\n```\n"
                 for k, b in zip(user_dict, b_array):
-                    if k == cb_dict['boss_number']:
+                    if k == cb_dict['boss_id']:
                         message += "【" + str(k) + "】(目安:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
                     else:
                         message += "【" + str(k) + "】(目安:" + str(b['target']) + ")\n"
@@ -207,7 +207,7 @@ class Actions:
                 time = time.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
 
                 cb_dict = cb.get_current_boss()
-                last_boss_number = cb_dict['boss_number'] - 1
+                last_boss_number = cb_dict['boss_id'] - 1
                 if last_boss_number == 0:
                     last_boss_number = 5
 

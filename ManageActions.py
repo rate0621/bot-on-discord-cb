@@ -32,7 +32,9 @@ class ManageActions:
             
             with closing(MySQLdb.connect(**args)) as conn:
                 cur = conn.cursor()
+                cur.execute("set foreign_key_checks = 0")
                 cur.execute("TRUNCATE TABLE clan_members")
+                cur.execute("set foreign_key_checks = 1")
 
                 for m in req.server.members:
                     is_member = 0
@@ -41,7 +43,7 @@ class ManageActions:
                         if r.id == '631094092050202626':
                             is_member = 1
 
-                    cur.execute("INSERT INTO clan_members (user_id, user_name, is_member) VALUES (%s, %s, %s)", (m.id, m.name, is_member))
+                    cur.execute("INSERT INTO clan_members (member_id, member_name, is_member) VALUES (%s, %s, %s)", (m.id, m.name, is_member))
 
                 conn.commit()
 
