@@ -37,9 +37,20 @@ CLANBATTLE_HELP = '''
 
 ### 予約確認
     誰々が予約しているかが表示される。
+    ついでに各ボスの目安ダメージも表示される。
 
 ### 凸数確認　「凸数確認」
     その日の凸数が表示される。
+
+### 完凸チェック 「完凸チェック」
+    その日完凸してる猛者が表示される。
+
+### 未完凸チェック　「未完凸チェック」
+    その日にまだ３凸していない騎士くんが表示される。
+
+### 強制退場 「強制退場」
+    ネビアちゃんが管理しているボス情報を一歩すすめる。
+    例えば、本当は現在はライライなんだけど、ダメージ入力をミスったりして、ボス情報が更新されないときとかに使うとよろし。
 
 ```
 '''
@@ -223,11 +234,14 @@ class Actions:
                 member_attack_dic = cb.get_today_members_attack_count()
                 three_attack_members = cb.get_three_attack_members(member_attack_dic)
 
-                message = "今日完凸してるメンバーは以下よ\n```\n"
-                for m in three_attack_members:
-                    message += m + "\n"
+                if three_attack_members == []:
+                    message = "今日はまだ誰も３凸終えてないわね。・・・大丈夫・・・？"
+                else:
+                    message = "今日完凸してるメンバーは以下よ\n```\n"
+                    for m in three_attack_members:
+                        message += m + "\n"
 
-                message += '```'
+                    message += '```'
 
                 self.res_type = 'text'
                 self.res      = message
@@ -246,7 +260,12 @@ class Actions:
                 self.res_type = 'text'
                 self.res      = message
 
-
+            if re.search("^強制退場$", req.content):
+                cb = ClanBattle.ClanBattle()
+                cb.lotate_boss()
+                cb_dict = cb.get_current_boss()
+                self.res_type = 'text'
+                self.res      = '現在のボス情報を' + cb_dict['boss_name'] + 'に更新しておいたわ。'
 
             if re.search("^ヘルプ$", req.content):
                 self.res_type = 'text'
