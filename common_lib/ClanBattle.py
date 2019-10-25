@@ -210,7 +210,7 @@ class ClanBattle():
 
     def get_carry_over_users(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT cm.member_name, co.boss_id, co.time FROM carry_over co INNER JOIN clan_members cm ON co.member_id = cm.member_id")
+        cur.execute("SELECT cm.member_name, co.boss_id, co.time FROM carry_over co INNER JOIN clan_members cm ON co.member_id = cm.member_id WHERE co.is_attack = 0")
 
         rows = cur.fetchall()
 
@@ -317,7 +317,7 @@ class ClanBattle():
         m_array = []
         for user_id in ma_dic:
             if ma_dic[user_id]['attack_count'] < 3:
-                m_array.append(ma_dic[user_id]['member_name'] + '  残り:' + str(ma_dic[user_id]['attack_count']))
+                m_array.append(ma_dic[user_id]['member_name'] + '  残り:' + str(3 - ma_dic[user_id]['attack_count']))
 
         return m_array
 
@@ -360,10 +360,12 @@ if __name__ == '__main__':
 #    is_carry_over = cb.update_current_boss(damage)
 #    cb.finish_attack(user_id, damage, is_carry_over)
 
-    print (cb.get_attack_count())
-    print (cb.get_remaining_atc_count())
+    #print (cb.check_carry_over('476229869001375744'))
 
-    cb.insert_carry_over(user_id, boss_num, time)
+#    print (cb.get_attack_count())
+#    print (cb.get_remaining_atc_count())
+#
+#    cb.insert_carry_over(user_id, boss_num, time)
     print (cb.get_carry_over_users())
 
 
