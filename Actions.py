@@ -31,11 +31,11 @@ CLANBATTLE_HELP = '''
 
     多分何件でも予約できるけど良識の範囲内で。
 
-### 予約キャンセル　「凸予約キャンセル」
+### 予約キャンセル　「予約キャンセル」
     予約したあとにやっぱりキャンセルしたくなったらこれで。
     凸宣言のキャンセルと間違わないように。
 
-### 予約確認
+### 予約確認 「予約確認」
     誰々が予約しているかが表示される。
     ついでに各ボスの目安ダメージも表示される。
 
@@ -256,6 +256,20 @@ class Actions:
                     message += m + "\n"
 
                 message += '```'
+
+                self.res_type = 'text'
+                self.res      = message
+
+            if re.search("^前日完凸チェック$", req.content):
+                cb = ClanBattle.ClanBattle()
+                member_attack_dic = cb.get_yesterday_members_attack_count()
+                not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+
+                message = "昨日３凸出来なかったメンバーは以下よ。\nただ、持ち越しで処理した場合は凸としてカウントされないからね。```\n"
+                for m in not_three_attack_members:
+                    message += m + "\n"
+
+                message += "```\nもし、持ち越しで処理とかしてないのに「３凸したのに表示されてるよ！」って人がいたらクラマスに文句を言うといいわ。\nまた、完凸できてた場合に表示してほしいご褒美画像があれば募集してるそうよ。"
 
                 self.res_type = 'text'
                 self.res      = message
