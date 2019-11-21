@@ -204,22 +204,24 @@ class ClanBattle():
         '''
         current_bossの情報を更新する。
         もし、撃破した場合は、その返り値を返す。
+        また、5ボスを討伐（一周）したか否かのフラグも返す。
         '''
         is_carry_over = 0
+        is_round      = False
         cb_dict = self.get_current_boss()
         cur = self.conn.cursor()
 
         # ボスのHPが０かマイナスになったかチェック。やり方については以下を参考
         # https://teratail.com/questions/151694
         if ((cb_dict['hit_point'] - damage > 0) - (cb_dict['hit_point'] - damage < 0)) <= 0:
-            self.lotate_boss()
+            is_round      = self.lotate_boss()
             is_carry_over = 1
         else:
             cur.execute("UPDATE current_boss SET hit_point = hit_point - %s", (damage,))
             self.conn.commit()
             
 
-        return is_carry_over
+        return is_carry_over, is_round
 
 
     def get_attack_count(self):
@@ -271,9 +273,11 @@ class ClanBattle():
 
         cb_dict['boss_id'] += 1
 
+        is_round = False
         if cb_dict['boss_id'] > 5:
             cb_dict['boss_id']     = 1
             cb_dict['loop_count'] += 1
+            is_round = True
 
         cur = self.conn.cursor()
         cur.execute("SELECT boss_id, max_hit_point FROM boss WHERE boss_id = %s", (cb_dict['boss_id'],))
@@ -282,7 +286,19 @@ class ClanBattle():
 
         cur.execute("UPDATE current_boss SET boss_id = %s, hit_point = %s, loop_count = %s", (boss_number, max_hit_point, cb_dict['loop_count']))
         self.conn.commit()
+
+        return is_round
         
+
+    def get_around_count(self):
+        cur = self.conn.cursor()
+        cb_dict = self.get_current_boss()
+        target_loop_count = cb_dict['loop_count'] - 1
+
+        cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE loop_count = %s GROUP BY loop_count", (target_loop_count,))
+
+        around_attack_count = cur.fetchone()[0]
+        return around_attack_count
 
     def insert_carry_over(self, user_id, boss_num, time):
         print ('持ち越し入れます')
@@ -413,12 +429,17 @@ if __name__ == '__main__':
 #    cb.lotate_boss()
 #    print (cb.get_current_boss())
 
-#    if not cb.attack_check(user_id):
-#        cb.attack(user_id)
-#    #cb.attack_cancel(user_id)
-#
-#    is_carry_over = cb.update_current_boss(damage)
-#    cb.finish_attack(user_id, damage, is_carry_over)
+    if not cb.attack_check(user_id):
+        cb.attack(user_id)
+    #cb.attack_cancel(user_id)
+
+    is_carry_over, is_round = cb.update_current_boss(damage)
+    cb.finish_attack(user_id, damage, is_carry_over)
+    if is_round:
+        around_count = cb.get_around_count()
+        print ('一周にかかった凸数は、' + str(around_count) + 'です。')
+
+
 
     #print (cb.check_carry_over('476229869001375744'))
 

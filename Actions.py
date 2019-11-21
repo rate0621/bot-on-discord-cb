@@ -99,7 +99,7 @@ class Actions:
                     if cb.check_carry_over(str(req.author.id)):
                         cb.finish_carry_over(str(req.author.id))
 
-                    is_defeat = cb.update_current_boss(int(damage))
+                    is_defeat, is_around = cb.update_current_boss(int(damage))
                     cb_dict = cb.get_current_boss()
 
                     suf_message = ''
@@ -115,6 +115,10 @@ class Actions:
                         suf_message = cb_dict['boss_name'] + '残り' + str(cb_dict['hit_point']) + 'よ。'
 
                     cb.finish_attack(str(req.author.id), int(damage), is_defeat)
+
+                    if is_around:
+                        around_count = cb.get_around_count()
+                        suf_message += 'ちなみにこの' + str(cb_dict['loop_count'] - 1) + '週目の討伐にかかった凸数は、' + str(around_count) + 'よ。'
 
                     self.res = 'お疲れさま！' + "\n" + suf_message
                 else:
