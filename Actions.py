@@ -52,6 +52,8 @@ CLANBATTLE_HELP = '''
     ネビアちゃんが管理しているボス情報を一歩すすめる。
     例えば、本当は現在はライライなんだけど、ダメージ入力をミスったりして、ボス情報が更新されないときとかに使うとよろし。
 
+### 周回確認 「周回確認」
+
 ```
 '''
 
@@ -284,6 +286,18 @@ class Actions:
                 cb_dict = cb.get_current_boss()
                 self.res_type = 'text'
                 self.res      = '現在のボス情報を' + cb_dict['boss_name'] + 'に更新しておいたわ。'
+
+            if re.search("^周回確認$", req.content):
+                cb = ClanBattle.ClanBattle()
+                round_dic = cb.get_all_around_count
+                mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
+                for r_key in round_dic:
+                    mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
+
+                mes += '```'
+
+                self.res_type = 'text'
+                self.res      = mes
 
             if re.search("^ヘルプ$", req.content):
                 self.res_type = 'text'

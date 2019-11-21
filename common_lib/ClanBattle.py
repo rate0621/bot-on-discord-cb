@@ -291,14 +291,28 @@ class ClanBattle():
         
 
     def get_around_count(self):
-        cur = self.conn.cursor()
         cb_dict = self.get_current_boss()
         target_loop_count = cb_dict['loop_count'] - 1
 
+        cur = self.conn.cursor()
         cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE loop_count = %s GROUP BY loop_count", (target_loop_count,))
 
         around_attack_count = cur.fetchone()[0]
         return around_attack_count
+
+    def get_all_around_count(self):
+        f, t = self.get_month_from_and_to()
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT loop_count, SUM(attack_weight) FROM attack_log WHERE attack_time BETWEEN %s AND %s GROUP BY loop_count", (f, t))
+
+        rows = cur.fetchall()
+        dic = {}
+        for row in rows:
+            dic.setdefault(row[0], {'attack_count': row[1]})
+
+        return dic
+
 
     def insert_carry_over(self, user_id, boss_num, time):
         print ('持ち越し入れます')
@@ -321,12 +335,10 @@ class ClanBattle():
             LEFT JOIN( \
                 SELECT \
                     member_id, \
-                    COUNT(member_id) attack_count \
+                    SUM(attack_weight) attack_count \
                 FROM \
                     attack_log \
                 WHERE \
-                    is_carry_over = 0 \
-                    AND \
                     attack_time BETWEEN %s AND %s \
                 GROUP BY \
                     member_id \
@@ -381,7 +393,7 @@ class ClanBattle():
     def get_three_attack_members(self, ma_dic):
         m_array = []
         for user_id in ma_dic:
-            if ma_dic[user_id]['attack_count'] == 3:
+            if ma_dic[user_id]['attack_count'] >= 3:
                 m_array.append(ma_dic[user_id]['member_name'])
 
         return m_array
@@ -406,12 +418,16 @@ if __name__ == '__main__':
 
 #    print (cb.get_bosses())
 
+
+### メンバー全員の凸数確認 ###
 #    member_attack_dic    = cb.get_today_members_attack_count()
-#    member_attack_dic    = cb.get_yesterday_members_attack_count()
+#    #member_attack_dic    = cb.get_yesterday_members_attack_count()
 #    three_attack_members = cb.get_three_attack_members(member_attack_dic)
 #    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
 #    print (three_attack_members)
+#    print ('====')
 #    print (not_three_attack_members)
+############
  
 #    cb.boss_reserve(user_id, 5)
 #    print (cb.reserved_check(user_id))
@@ -429,16 +445,26 @@ if __name__ == '__main__':
 #    cb.lotate_boss()
 #    print (cb.get_current_boss())
 
-    if not cb.attack_check(user_id):
-        cb.attack(user_id)
-    #cb.attack_cancel(user_id)
+### 単純な1凸 ###
+#    if not cb.attack_check(user_id):
+#        cb.attack(user_id)
+#    #cb.attack_cancel(user_id)
+#
+#    is_carry_over, is_round = cb.update_current_boss(damage)
+#    cb.finish_attack(user_id, damage, is_carry_over)
+#    if is_round:
+#        around_count = cb.get_around_count()
+#        print ('一周にかかった凸数は、' + str(around_count) + 'です。')
+#################
 
-    is_carry_over, is_round = cb.update_current_boss(damage)
-    cb.finish_attack(user_id, damage, is_carry_over)
-    if is_round:
-        around_count = cb.get_around_count()
-        print ('一周にかかった凸数は、' + str(around_count) + 'です。')
+### 周回確認 ###
+    round_dic = cb.get_all_around_count()
+    mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
+    for r_key in round_dic:
+        mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
+    mes += '```'
 
+    print (mes)
 
 
     #print (cb.check_carry_over('476229869001375744'))
