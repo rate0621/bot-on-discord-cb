@@ -138,10 +138,10 @@ class ClanBattle():
 
     def get_current_boss(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT c.boss_id, b.boss_name, c.hit_point FROM current_boss c INNER JOIN boss b ON c.boss_id = b.boss_id")
+        cur.execute("SELECT c.boss_id, b.boss_name, c.hit_point, c.loop_count FROM current_boss c INNER JOIN boss b ON c.boss_id = b.boss_id")
 
         r = cur.fetchone()
-        d = {'boss_id': r[0], 'boss_name': r[1], 'hit_point': r[2]}
+        d = {'boss_id': r[0], 'boss_name': r[1], 'hit_point': r[2], 'loop_count': r[3]}
         return d
 
     def attack(self, user_id):
@@ -152,8 +152,20 @@ class ClanBattle():
 
         cb_dict = self.get_current_boss()
 
+        f, t = self.get_today_from_and_to()
+
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO attack_log (attack_time, member_id, boss_id, damage, score, is_carry_over) VALUES (%s, %s, %s, 0, 0, 0)", (attack_time, user_id, cb_dict['boss_id']))
+        cur.execute("SELECT is_carry_over FROM attack_log WHERE member_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+        is_carry_over = cur.fetchone()
+
+        if is_carry_over is None or is_carry_over[0] == 0:
+            weight = 1
+        else:
+            weight = 0.5
+
+
+        #cur = self.conn.cursor()
+        cur.execute("INSERT INTO attack_log (attack_time, member_id, boss_id, damage, score, is_carry_over, loop_count, attack_weight) VALUES (%s, %s, %s, 0, 0, 0, %s, %s)", (attack_time, user_id, cb_dict['boss_id'], cb_dict['loop_count'], weight))
 
         self.conn.commit()
 
@@ -179,7 +191,11 @@ class ClanBattle():
         ダメージ情報を更新
         '''
         cur = self.conn.cursor()
-        cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
+        if is_carry_over:
+            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s, attack_weight = 0.5 WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
+        else:
+            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
+
         self.conn.commit()
 
 
@@ -210,8 +226,9 @@ class ClanBattle():
         f, t = self.get_today_from_and_to()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM attack_log WHERE damage > 0 AND is_carry_over = 0 AND attack_time BETWEEN %s AND %s", (f, t))
-        return cur.rowcount
+        cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE damage > 0 AND attack_time BETWEEN %s AND %s", (f, t))
+        attack_count = cur.fetchone()[0]
+        return attack_count
 
 
 
@@ -244,12 +261,9 @@ class ClanBattle():
 
 
     def get_remaining_atc_count(self):
-        f, t = self.get_today_from_and_to()
+        attack_count = self.get_attack_count()
 
-        cur = self.conn.cursor()
-        cur.execute("SELECT * FROM attack_log WHERE attack_time BETWEEN %s AND %s AND is_carry_over = 0", (f, t))
-
-        return 90 - cur.rowcount
+        return 90 - attack_count
 
 
     def lotate_boss(self):
@@ -258,14 +272,15 @@ class ClanBattle():
         cb_dict['boss_id'] += 1
 
         if cb_dict['boss_id'] > 5:
-            cb_dict['boss_id'] = 1
+            cb_dict['boss_id']     = 1
+            cb_dict['loop_count'] += 1
 
         cur = self.conn.cursor()
         cur.execute("SELECT boss_id, max_hit_point FROM boss WHERE boss_id = %s", (cb_dict['boss_id'],))
 
         boss_number, max_hit_point = cur.fetchone()
 
-        cur.execute("UPDATE current_boss SET boss_id = %s, hit_point = %s", (boss_number, max_hit_point))
+        cur.execute("UPDATE current_boss SET boss_id = %s, hit_point = %s, loop_count = %s", (boss_number, max_hit_point, cb_dict['loop_count']))
         self.conn.commit()
         
 
@@ -371,16 +386,16 @@ if __name__ == '__main__':
     #user_id =  '523048909833109504'
     boss_num = 2
     time = 50
-    damage = 5000000
+    damage = 7000000
 
 #    print (cb.get_bosses())
 
 #    member_attack_dic    = cb.get_today_members_attack_count()
-    member_attack_dic    = cb.get_yesterday_members_attack_count()
+#    member_attack_dic    = cb.get_yesterday_members_attack_count()
 #    three_attack_members = cb.get_three_attack_members(member_attack_dic)
-    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+#    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
 #    print (three_attack_members)
-    print (not_three_attack_members)
+#    print (not_three_attack_members)
  
 #    cb.boss_reserve(user_id, 5)
 #    print (cb.reserved_check(user_id))
@@ -395,11 +410,13 @@ if __name__ == '__main__':
 #    print (cb.get_all_reserved_users())
 
 #    print (cb.get_current_boss())
+#    cb.lotate_boss()
+#    print (cb.get_current_boss())
 
 #    if not cb.attack_check(user_id):
 #        cb.attack(user_id)
-    #cb.attack_cancel(user_id)
-
+#    #cb.attack_cancel(user_id)
+#
 #    is_carry_over = cb.update_current_boss(damage)
 #    cb.finish_attack(user_id, damage, is_carry_over)
 
@@ -407,7 +424,7 @@ if __name__ == '__main__':
 
 #    print (cb.get_attack_count())
 #    print (cb.get_remaining_atc_count())
-#
+
 #    cb.insert_carry_over(user_id, boss_num, time)
 #    print (cb.get_carry_over_users())
 
