@@ -289,7 +289,7 @@ class Actions:
 
             if re.search("^周回確認$", req.content):
                 cb = ClanBattle.ClanBattle()
-                round_dic = cb.get_all_around_count
+                round_dic = cb.get_all_around_count()
                 mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
                 for r_key in round_dic:
                     mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
