@@ -230,10 +230,11 @@ class ClanBattle():
         cur = self.conn.cursor()
         cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE damage > 0 AND attack_time BETWEEN %s AND %s", (f, t))
 
-        if cur.fetchone()[0] is None:
+        val = cur.fetchone()[0]
+        if val is None:
             attack_count = 0
         else:
-            attack_count = cur.fetchone()[0]
+            attack_count = val
 
         return attack_count
 
@@ -475,7 +476,7 @@ if __name__ == '__main__':
     #print (cb.check_carry_over('476229869001375744'))
 
     print (cb.get_attack_count())
-    print (cb.get_remaining_atc_count())
+    #print (cb.get_remaining_atc_count())
 
 #    cb.insert_carry_over(user_id, boss_num, time)
 #    print (cb.get_carry_over_users())
