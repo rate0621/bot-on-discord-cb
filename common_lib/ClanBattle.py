@@ -229,7 +229,12 @@ class ClanBattle():
 
         cur = self.conn.cursor()
         cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE damage > 0 AND attack_time BETWEEN %s AND %s", (f, t))
-        attack_count = cur.fetchone()[0]
+
+        if cur.fetchone()[0] is None:
+            attack_count = 0
+        else:
+            attack_count = cur.fetchone()[0]
+
         return attack_count
 
 
@@ -458,19 +463,19 @@ if __name__ == '__main__':
 #################
 
 ### 周回確認 ###
-    round_dic = cb.get_all_around_count()
-    mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
-    for r_key in round_dic:
-        mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
-    mes += '```'
-
-    print (mes)
-
+#    round_dic = cb.get_all_around_count()
+#    mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
+#    for r_key in round_dic:
+#        mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
+#    mes += '```'
+#
+#    print (mes)
+#############
 
     #print (cb.check_carry_over('476229869001375744'))
 
-#    print (cb.get_attack_count())
-#    print (cb.get_remaining_atc_count())
+    print (cb.get_attack_count())
+    print (cb.get_remaining_atc_count())
 
 #    cb.insert_carry_over(user_id, boss_num, time)
 #    print (cb.get_carry_over_users())
