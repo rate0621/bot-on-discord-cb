@@ -2,52 +2,26 @@ import os, sys
 import sqlite3
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, date
+import calendar
+import MySQLdb
+from contextlib import closing
 
 here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(here)
-from GspreadWrapper import GspreadWrapper
 
-
-SHEETS_AND_COLUMS = {
-    'clan_members': ['user_id', 'user_name'],
-    'boss_master' : ['event_month', 'boss_number', 'boss_name', 'max_hit_point', 'target'],
-    'boss_reserve': ['datetime', 'user_id', 'user_name', 'boss_number', 'is_attack'],
-    'attack_log'  : ['datetime', 'user_id', 'user_name', 'boss_number', 'boss_name', 'damage', 'score', 'is_carry_over'],
-    'carry_over'  : ['datetime', 'user_id', 'user_name', 'boss_number', 'boss_name', 'time'],
-    'current_boss': ['boss_number', 'hit_point']
-}
-
-class ClanBattle(GspreadWrapper):
+class ClanBattle():
     def __init__(self):
-        TYPE           = os.getenv("GS_TYPE",           "")
-        CLIENT_EMAIL   = os.getenv("GS_CLIENT_EMAIL",   "")
-        PRIVATE_KEY    = os.getenv("GS_PRIVATE_KEY",    "")
-        PRIVATE_KEY_ID = os.getenv("GS_PRIVATE_KEY_ID", "")
-        CLIENT_ID      = os.getenv("GS_CLIENT_ID",      "")
 
-        key_dict = {
-            'type'          : TYPE,
-            'client_email'  : CLIENT_EMAIL,
-            'private_key'   : PRIVATE_KEY,
-            'private_key_id': PRIVATE_KEY_ID,
-            'client_id'     : CLIENT_ID,
+        args = {
+            "host"   : os.getenv("DB_HOST", ""),
+            "user"   : os.getenv("DB_USER", ""),
+            "passwd" : os.getenv("DB_PASS", ""),
+            "db"     : os.getenv("DB_NAME", ""),
+            "charset" : os.getenv("DB_CHARSET", ""),
         }
 
-        super().__init__(key_dict)
-
-    def init(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-
-        # 必要なシート(とカラム)の作成
-        for sheet in SHEETS_AND_COLUMS:
-            self.check_sheet_exists_and_create(sheet)
-            ws = self.get_gsfile(sheet)
-
-            for i, col in enumerate(SHEETS_AND_COLUMS[sheet]):
-                label = self.toAlpha(i + 1) + str(1)
-                ws.update_acell(label, col)
+        self.conn = MySQLdb.connect(**args)
 
 
     def get_today_from_and_to(self):
@@ -57,92 +31,118 @@ class ClanBattle(GspreadWrapper):
         t = tomorrow.strftime("%Y/%m/%d 04:59:00")
         return f, t
 
+    def get_yesterday_from_and_to(self):
+        f = datetime.now() - timedelta(hours=5) - timedelta(days=1)
+        t = f + timedelta(days=1)
+        f = f.strftime("%Y/%m/%d 05:00:00")
+        t = t.strftime("%Y/%m/%d 04:59:00")
+        return f, t
 
-    def all_clear(self):
-        '''
-        クラバト用のDB（スプシ）の内容をすべて空っぽにする。主に開発時にのみ使う。
-        '''
-        #gw = GspreadWrapper.GspreadWrapper()
-        tl = ['boss_reserve', 'attack_log']
-        for t in tl:
-            ws = self.get_gsfile(t)
-            df = self.create_gsdf(ws)
+    def get_month_from_and_to(self):
+        this_month = date.today()
+        f = date(this_month.year, this_month.month, 1)
+        t = date(this_month.year, this_month.month+1, 1) - timedelta(days=1)
 
-            col_lastnum = len(df.columns)
-            row_lastnum = len(df.index)
-
-            cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-            for cell in cell_list:
-                cell.value = ''
-
-            ws.update_cells(cell_list)
-
-
-    def sheet_clear(self, t):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile(t)
-        df = self.create_gsdf(ws)
-
-        col_lastnum = len(df.columns)
-        row_lastnum = len(df.index)
-
-        cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-        for cell in cell_list:
-            cell.value = ''
-
-        ws.update_cells(cell_list)
+        return f, t
 
 
     def get_bosses(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('boss_master')
-        df = self.create_gsdf(ws)
+        '''
+        開催月のボス情報をマスタから取得
+        '''
+        cur = self.conn.cursor()
+        #f, t = self.get_month_from_and_to()
 
-        return df[['boss_number', 'boss_name', 'target']].values
+        cur.execute("SELECT boss_id, boss_name, target FROM boss")
+        boss_list = []
+        for row in cur.fetchall():
+            boss_list.append({'boss_id': row[0], 'boss_name': row[1], 'target': row[2]})
+
+        return boss_list
 
 
     def boss_reserve(self, user_id, boss_num):
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('boss_reserve')
-        df = self.create_gsdf(ws)
-
-        # スプシをそのまま読み込むと文字列（object）型になってしまうためfloatに変換
-        l = ['boss_number', 'is_attack']
-        df[l] = df[l].astype('float')
 
         if self.reserved_check(user_id, boss_num):
             print ('すでに予約済みです')
         else:
             print ('予約します')
 
-            append_row_num = len(ws.col_values(1)) + 1
-            s = pd.Series([_datetime, user_id, '=VLOOKUP(B'+str(append_row_num)+',clan_members!A2:B200,2,False)', boss_num, 0], index=df.columns)
+            cur = self.conn.cursor()
+            cur.execute("INSERT INTO boss_reserve (reserved_at, member_id, boss_id, is_attack, is_cancel) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, 0))
 
-            # MEMO: appendするときはnameを指定しないとエラーになるが、ignore_index=True とすることで連番を振ってくれる
-            df = df.append(s, ignore_index=True)
-
-            col_lastnum = len(df.columns)
-            row_lastnum = len(df.index)
-
-            cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-            for cell in cell_list:
-                val = df.iloc[cell.row - 2][cell.col - 1]
-                cell.value = val
-
-            ws.update_cells(cell_list, value_input_option='USER_ENTERED')
+            self.conn.commit()
             print ('予約完了')
 
+
+    def reserved_check(self, user_id, boss_num=None):
+        cur = self.conn.cursor()
+
+        if boss_num is None:
+            cur.execute("SELECT * FROM boss_reserve WHERE member_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id,))
+        else:
+            boss_num = int(boss_num)
+            cur.execute("SELECT * FROM boss_reserve WHERE member_id = %s AND boss_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id, boss_num))
+
+        if cur.rowcount > 0:
+            return True
+        else:
+            return False
+
+    def reserved_clear(self, user_id, boss_num):
+        '''
+        予約していたユーザが凸し終わったときの処理
+        '''
+        cur = self.conn.cursor()
+        cur.execute("UPDATE boss_reserve SET is_attack = 1 WHERE member_id = %s AND boss_id = %s AND is_cancel = 0", (user_id, boss_num))
+        self.conn.commit()
+
+
+    def reserved_cancel(self, user_id, boss_num=None):
+        '''
+        ユーザが凸キャンセルしたときの処理
+        '''
+        cur = self.conn.cursor()
+
+        if boss_num is None:
+            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE member_id = %s  AND is_attack = 0", (user_id,))
+        else:
+            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE member_id = %s AND boss_id = %s AND is_attack = 0", (user_id, boss_num))
+
+        self.conn.commit()
+
+    def get_reserved_users(self, boss_num):
+        cur = self.conn.cursor()
+        cur.execute("SELECT br.member_id, cm.member_name FROM boss_reserve br INNER JOIN clan_members cm ON br.member_id = cm.member_id WHERE boss_id = %s AND is_attack = 0 AND is_cancel = 0", (boss_num,))
+
+        l = []
+        rows = cur.fetchall()
+        for row in rows:
+            l.append({'member_id': row[0], 'member_name': row[1]})
+
+        return l
+
+
+    def get_all_reserved_users(self):
+        boss_array = self.get_bosses()
+
+        dic = {}
+        for boss in boss_array:
+            dic.setdefault(boss['boss_id'], [])
+            for u in self.get_reserved_users(boss['boss_id']):
+                dic.setdefault(boss['boss_id'], []).append(u['member_name'])
+
+        return dic
+
+
     def get_current_boss(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-        boss_df  = self.create_gsdf(self.get_gsfile('current_boss'))
-        boss_num = boss_df.at[0, 'boss_number']
-        boss_hp  = boss_df.at[0, 'hit_point']
+        cur = self.conn.cursor()
+        cur.execute("SELECT c.boss_id, b.boss_name, c.hit_point, c.loop_count FROM current_boss c INNER JOIN boss b ON c.boss_id = b.boss_id")
 
-        boss_master_df = self.create_gsdf(self.get_gsfile('boss_master'))
-        boss_name = boss_master_df.loc[boss_master_df.boss_number == boss_num, 'boss_name']
-
-        return boss_num, boss_name.item(), boss_hp
+        r = cur.fetchone()
+        d = {'boss_id': r[0], 'boss_name': r[1], 'hit_point': r[2], 'loop_count': r[3]}
+        return d
 
     def attack(self, user_id):
         '''
@@ -150,344 +150,335 @@ class ClanBattle(GspreadWrapper):
         '''
         attack_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
-        #self.gc = GspreadWrapper.GspreadWrapper()
-        boss_num, boss_name, boss_hp = self.get_current_boss()
-
-        ws = self.get_gsfile('attack_log')
-        df = self.create_gsdf(ws)
-        col_lastnum = len(df.columns)
-
-        append_row_num = len(ws.col_values(1)) + 1
-        val_list = [attack_time, user_id, '=VLOOKUP(B'+str(append_row_num)+',clan_members!A2:B200,2,False)', boss_num, '', 0, 0, 0]
-
-        cell_list  = ws.range('A'+str(append_row_num)+':'+self.toAlpha(col_lastnum)+str(append_row_num))
-        for (cell, val) in zip(cell_list, val_list):
-            if val == '':
-                continue
-
-            cell.value = val
-
-        # value_input_option='USER_ENTERED' を入れることで、スプシの関数をそのまま埋め込むことができる
-        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
-
-    def attack_check(self, user_id):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('attack_log')
-        df = self.create_gsdf(ws)
-
-        # @をつけると変数を埋め込むことができる
-        if len(df.query("user_id == @user_id & damage == 0")):
-            return 1
-        else:
-            return 0
-
-    def attack_cancel(self, user_id):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('attack_log')
-        df = self.create_gsdf(ws)
-
-        #queryで取得した結果の末尾のレコードを削除する
-        df.drop(index=df.query("user_id == @user_id & damage == 0").index[-1], inplace=True)
-
-        # 上の処理でdropするとvlookupの関数の値がずれてしまうため治す
-        df.reset_index(drop=True, inplace=True)
-        for i in df.index.values:
-            df.iloc[i]['user_name'] = '=VLOOKUP(B' + str(i + 2) + ',clan_members!A2:B200,2,False)'
-
-
-        # スプシからデータを取得すると数値になってしまうため変換する
-        df['datetime'] = df['datetime'].map(self.excel_date)
-        df['datetime'] = df['datetime'].astype(str)
-
-        col_lastnum = len(df.columns)
-        row_lastnum = len(df.index)
-
-        self.sheet_clear('attack_log')
-        cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-        for cell in cell_list:
-            val = df.iloc[cell.row - 2][cell.col - 1]
-            cell.value = val
-
-        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
-
-    def get_attack_count(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('attack_log')
-        df = self.create_gsdf(ws)
-
-        # スプシからデータを取得すると数値になってしまうため変換する
-        df['datetime'] = df['datetime'].map(self.excel_date)
-        df['datetime'] = pd.to_datetime(df['datetime'])
+        cb_dict = self.get_current_boss()
 
         f, t = self.get_today_from_and_to()
 
-        #queryで取得した結果の末尾のレコードを削除する
-        return len(df[(df.datetime >= f) & (df.datetime <= t) & (df.is_carry_over == 0)])
+        cur = self.conn.cursor()
+        cur.execute("SELECT is_carry_over FROM attack_log WHERE member_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+        is_carry_over = cur.fetchone()
 
-
-    def update_current_boss(self, damage):
-        '''
-        current_bossの情報を更新する。
-        もし、撃破した場合は、その返り値を返す。
-        '''
-        is_carry_over = 0
-
-        # さきにcurrent_bossの情報更新
-        #gw = GspreadWrapper.GspreadWrapper()
-        boss_num, boss_name, boss_hp = self.get_current_boss()
-        ws = self.get_gsfile('current_boss')
-        df = self.create_gsdf(ws)
-
-        # スプシをそのまま読み込むと文字列（object）型になってしまうためfloatに変換
-        l = ['boss_number', 'hit_point']
-        df[l] = df[l].astype('float')
-
-        df.loc[df.boss_number == boss_num, 'hit_point'] = df.loc[df.boss_number == boss_num, 'hit_point'] - damage
-
-        # ボスのHPが０かマイナスになったかチェック。やり方については以下を参考
-        # https://teratail.com/questions/151694
-        if ((df.loc[df.boss_number == boss_num, 'hit_point'].item() > 0) - (df.loc[df.boss_number == boss_num, 'hit_point'].item() < 0)) <= 0:
-            self.lotate_boss()
-            is_carry_over = 1
+        if is_carry_over is None or is_carry_over[0] == 0:
+            weight = 1
         else:
-            col_lastnum = len(df.columns)
-            row_lastnum = len(df.index)
+            weight = 0.5
 
-            cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-            for cell in cell_list:
-                val = df.iloc[cell.row - 2][cell.col - 1]
-                cell.value = val
 
-            ws.update_cells(cell_list, value_input_option='USER_ENTERED')
+        #cur = self.conn.cursor()
+        cur.execute("INSERT INTO attack_log (attack_time, member_id, boss_id, damage, score, is_carry_over, loop_count, attack_weight) VALUES (%s, %s, %s, 0, 0, 0, %s, %s)", (attack_time, user_id, cb_dict['boss_id'], cb_dict['loop_count'], weight))
 
-        return is_carry_over
+        self.conn.commit()
+
+
+    def attack_check(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM attack_log WHERE member_id = %s AND damage = 0", (user_id,))
+
+        if cur.rowcount > 0:
+            return True
+        else:
+            return False
+
+
+    def attack_cancel(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM attack_log WHERE member_id = %s AND damage = 0", (user_id,))
+        self.conn.commit()
 
 
     def finish_attack(self, user_id, damage, is_carry_over):
         '''
         ダメージ情報を更新
         '''
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('attack_log')
-        df = self.create_gsdf(ws)
-
-        # スプシをそのまま読み込むと文字列（object）型になってしまうためfloatに変換
-        l = ['boss_number', 'damage', 'score', 'is_carry_over']
-        df[l] = df[l].astype('float')
-
-        df.loc[(df.user_id == user_id) & (df.damage == 0), 'is_carry_over'] = is_carry_over
-        df.loc[(df.user_id == user_id) & (df.damage == 0), 'damage']        = damage
-
-        col_lastnum = len(df.columns)
-        row_lastnum = len(df.index)
-
-        cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-        for cell in cell_list:
-            val = df.iloc[cell.row - 2][cell.col - 1]
-            cell.value = val
-
-        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
-
-
-    def reserved_check(self, user_id, boss_num=None):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('boss_reserve')
-        df = self.create_gsdf(ws)
-
-        if boss_num is None:
-            w = "user_id == @user_id & is_attack == 0"
+        cur = self.conn.cursor()
+        if is_carry_over:
+            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s, attack_weight = 0.5 WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
         else:
-            boss_num = int(boss_num)
-            w = "user_id == @user_id & boss_number == @boss_num & is_attack == 0" 
+            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
 
-        # @をつけると変数を埋め込むことができる
-        if len(df.query(w)):
-            return 1
+        self.conn.commit()
+
+
+
+    def update_current_boss(self, damage):
+        '''
+        current_bossの情報を更新する。
+        もし、撃破した場合は、その返り値を返す。
+        また、5ボスを討伐（一周）したか否かのフラグも返す。
+        '''
+        is_carry_over = 0
+        is_round      = False
+        cb_dict = self.get_current_boss()
+        cur = self.conn.cursor()
+
+        # ボスのHPが０かマイナスになったかチェック。やり方については以下を参考
+        # https://teratail.com/questions/151694
+        if ((cb_dict['hit_point'] - damage > 0) - (cb_dict['hit_point'] - damage < 0)) <= 0:
+            is_round      = self.lotate_boss()
+            is_carry_over = 1
         else:
-            return 0
+            cur.execute("UPDATE current_boss SET hit_point = hit_point - %s", (damage,))
+            self.conn.commit()
+            
 
-    def get_reserved_users(self, boss_num):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('boss_reserve')
-        df = self.create_gsdf(ws)
-
-        return df.query("boss_number == @boss_num & is_attack == 0").user_id.tolist()
+        return is_carry_over, is_round
 
 
-    def get_all_reserved_users(self, boss_array):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('boss_reserve')
-        df = self.create_gsdf(ws)
+    def get_attack_count(self):
+        f, t = self.get_today_from_and_to()
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE damage > 0 AND attack_time BETWEEN %s AND %s", (f, t))
+
+        if cur.fetchone()[0] is None:
+            attack_count = 0
+        else:
+            attack_count = cur.fetchone()[0]
+
+        return attack_count
+
+
+
+    def get_carry_over_users(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT cm.member_name, co.boss_id, co.time FROM carry_over co INNER JOIN clan_members cm ON co.member_id = cm.member_id WHERE co.is_attack = 0")
+
+        rows = cur.fetchall()
 
         dic = {}
-        for boss in boss_array:
-            dic.setdefault(boss[0], [])
-            for u in df.query("boss_number == @boss[0] & is_attack == 0").user_id.tolist():
-                dic.setdefault(boss[0], []).append(u)
+        for row in rows:
+            dic.setdefault(row[0], {'attacked_boss': row[1], 'time': row[2]})
 
         return dic
 
-    def get_carry_over_users(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('carry_over')
-        df = self.create_gsdf(ws)
+    def check_carry_over(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM carry_over WHERE member_id = %s AND is_attack = 0", (user_id,))
 
-        df.set_index('user_id', inplace=True)
-        return df
-
-    def reserved_clear(self, user_id, boss_num=None):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('boss_reserve')
-        df = self.create_gsdf(ws)
-        if boss_num is None:
-            df.loc[(df.user_id == user_id) & (df.is_attack == 0), 'is_attack'] = 1
+        if cur.rowcount > 0:
+            return True
         else:
-            boss_num = int(boss_num)
-            df.loc[(df.user_id == user_id) & (df.is_attack == 0) & (df.boss_number == boss_num), 'is_attack'] = 1
+            return False
 
-        col_lastnum = len(df.columns)
-        row_lastnum = len(df.index)
 
-        cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-        for cell in cell_list:
-            val = df.iloc[cell.row - 2][cell.col - 1]
-            cell.value = val
+    def finish_carry_over(self, user_id):
+        cur = self.conn.cursor()
+        cur.execute("UPDATE carry_over SET is_attack = 1 WHERE member_id = %s AND is_attack = 0", (user_id,))
+        self.conn.commit()
 
-        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
 
     def get_remaining_atc_count(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('attack_log')
-        df = self.create_gsdf(ws)
+        attack_count = self.get_attack_count()
 
-        # スプシからデータを取得すると数値になってしまうため変換する
-        df['datetime'] = df['datetime'].map(self.excel_date)
-        df['datetime'] = pd.to_datetime(df['datetime'])
-
-        f, t = self.get_today_from_and_to()
-
-        #queryで取得した結果の末尾のレコードを削除する
-        return 90 - len(df[(df.datetime >= f) & (df.datetime <= t) & (df.is_carry_over == 0)])
+        return 90 - attack_count
 
 
     def lotate_boss(self):
-        #gw = GspreadWrapper.GspreadWrapper()
-        boss_num, boss_name, boss_hp = self.get_current_boss()
-        ws = self.get_gsfile('current_boss')
-        df = self.create_gsdf(ws)
+        cb_dict = self.get_current_boss()
 
-        # スプシをそのまま読み込むと文字列（object）型になってしまうためfloatに変換
-        l = ['boss_number', 'hit_point']
-        df[l] = df[l].astype('float')
+        cb_dict['boss_id'] += 1
 
-        df.iloc[0, 0] += 1
+        is_round = False
+        if cb_dict['boss_id'] > 5:
+            cb_dict['boss_id']     = 1
+            cb_dict['loop_count'] += 1
+            is_round = True
 
-        if df.iloc[0, 0] > 5:
-            df.iloc[0, 0] = 1
+        cur = self.conn.cursor()
+        cur.execute("SELECT boss_id, max_hit_point FROM boss WHERE boss_id = %s", (cb_dict['boss_id'],))
 
-        ws2 = self.get_gsfile('boss_master')
-        df2 = self.create_gsdf(ws2)
+        boss_number, max_hit_point = cur.fetchone()
 
-        # スプシをそのまま読み込むと文字列（object）型になってしまうためfloatに変換
-        l = ['boss_number', 'max_hit_point']
-        df2[l] = df2[l].astype('float')
+        cur.execute("UPDATE current_boss SET boss_id = %s, hit_point = %s, loop_count = %s", (boss_number, max_hit_point, cb_dict['loop_count']))
+        self.conn.commit()
 
-        # なにかもっといいやりかたがあるはずだがうまく行かないのでいったんこれですすめる(.item()を使うといけるかも)
-        df.iloc[0, 1] = df2.loc[df.iloc[0, 0] - 1, 'max_hit_point']
+        return is_round
+        
 
-        col_lastnum = len(df.columns)
-        row_lastnum = len(df.index)
+    def get_around_count(self):
+        cb_dict = self.get_current_boss()
+        target_loop_count = cb_dict['loop_count'] - 1
 
-        cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-        for cell in cell_list:
-            val = df.iloc[cell.row - 2][cell.col - 1]
-            cell.value = val
+        cur = self.conn.cursor()
+        cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE loop_count = %s GROUP BY loop_count", (target_loop_count,))
 
-        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
+        around_attack_count = cur.fetchone()[0]
+        return around_attack_count
 
-    def insert_carry_over(self, user_id, time):
-        #gw = GspreadWrapper.GspreadWrapper()
-        ws = self.get_gsfile('carry_over')
-        df = self.create_gsdf(ws)
-        boss_num, boss_name, boss_hp = cb.get_current_boss()
+    def get_all_around_count(self):
+        f, t = self.get_month_from_and_to()
 
+        cur = self.conn.cursor()
+        cur.execute("SELECT loop_count, SUM(attack_weight) FROM attack_log WHERE attack_time BETWEEN %s AND %s GROUP BY loop_count", (f, t))
+
+        rows = cur.fetchall()
+        dic = {}
+        for row in rows:
+            dic.setdefault(row[0], {'attack_count': row[1]})
+
+        return dic
+
+
+    def insert_carry_over(self, user_id, boss_num, time):
+        print ('持ち越し入れます')
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-        append_row_num = len(ws.col_values(1)) + 1
-        s = pd.Series([_datetime, user_id, '=VLOOKUP(B'+str(append_row_num)+',clan_members!A2:B200,2,False)', boss_num, '', time], index=df.columns)
+        cur = self.conn.cursor()
+        cur.execute("INSERT INTO carry_over (carried_at, member_id, boss_id, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
 
-        # MEMO: appendするときはnameを指定しないとエラーになるが、ignore_index=True とすることで連番を振ってくれる
-        df = df.append(s, ignore_index=True)
+        self.conn.commit()
 
-        col_lastnum = len(df.columns)
-        row_lastnum = len(df.index)
+    def get_today_members_attack_count(self):
+        f, t = self.get_today_from_and_to()
+        cur = self.conn.cursor()
+        cur.execute(" \
+            SELECT \
+                cm.member_id, \
+                cm.member_name, \
+                IFNULL(ac.attack_count, 0) AS attack_count \
+            FROM \
+                clan_members cm \
+            LEFT JOIN( \
+                SELECT \
+                    member_id, \
+                    SUM(attack_weight) attack_count \
+                FROM \
+                    attack_log \
+                WHERE \
+                    attack_time BETWEEN %s AND %s \
+                GROUP BY \
+                    member_id \
+            ) ac \
+            ON cm.member_id = ac.member_id \
+            WHERE \
+                cm.is_member = 1 \
+        ", (f, t))
 
-        cell_list = ws.range('A2:'+self.toAlpha(col_lastnum)+str(row_lastnum + 1))
-        for cell in cell_list:
-            val = df.iloc[cell.row - 2][cell.col - 1]
-            cell.value = val
+        rows = cur.fetchall()
+        dic = {}
+        for row in rows:
+            dic.setdefault(row[0], {'member_name': row[1], 'attack_count': row[2]})
+        
+        return dic
 
-        ws.update_cells(cell_list, value_input_option='USER_ENTERED')
+    def get_yesterday_members_attack_count(self):
+        f, t = self.get_yesterday_from_and_to()
+        cur = self.conn.cursor()
+        cur.execute(" \
+            SELECT \
+                cm.member_id, \
+                cm.member_name, \
+                IFNULL(ac.attack_count, 0) AS attack_count \
+            FROM \
+                clan_members cm \
+            LEFT JOIN( \
+                SELECT \
+                    member_id, \
+                    COUNT(member_id) attack_count \
+                FROM \
+                    attack_log \
+                WHERE \
+                    is_carry_over = 0 \
+                    AND \
+                    attack_time BETWEEN %s AND %s \
+                GROUP BY \
+                    member_id \
+            ) ac \
+            ON cm.member_id = ac.member_id \
+            WHERE \
+                cm.is_member = 1 \
+        ", (f, t))
 
+        rows = cur.fetchall()
+        dic = {}
+        for row in rows:
+            dic.setdefault(row[0], {'member_name': row[1], 'attack_count': row[2]})
+        
+        return dic
+
+    def get_three_attack_members(self, ma_dic):
+        m_array = []
+        for user_id in ma_dic:
+            if ma_dic[user_id]['attack_count'] >= 3:
+                m_array.append(ma_dic[user_id]['member_name'])
+
+        return m_array
+
+    def get_not_three_attack_members(self, ma_dic):
+        m_array = []
+        for user_id in ma_dic:
+            if ma_dic[user_id]['attack_count'] < 3:
+                m_array.append(ma_dic[user_id]['member_name'] + '  残り:' + str(3 - ma_dic[user_id]['attack_count']))
+
+        return m_array
 
 
 if __name__ == '__main__':
     cb = ClanBattle()
     user_id = '474761974832431148'
-    ### 初期化
-    #cb.init()
-    #exit()
-    ###
+    #user_id =  '478542546537283594'
+    #user_id =  '523048909833109504'
+    boss_num = 2
+    time = 50
+    damage = 7000000
 
-    #cb.boss_reserve('478542546537283594', 5)
-    #cb.all_clear()
-
-#    ### 「凸」→「凸完了」したときの動作
-#    damage = 8000000
-#    cb.attack(user_id)
-#    is_defeat = cb.update_current_boss(damage)
-#    cb.finish_attack(user_id, damage, is_defeat)
-#    exit()
-#    ###
-
-    ### 「凸キャンセル」
-#    cb.attack('474761974832431148')
-#    cb.attack_cancel('474761974832431148')
-    ###
-
-    ### 「予約確認」
-    co_users_df = cb.get_carry_over_users()
-
-    b_df      = cb.get_bosses()
-    user_dict = cb.get_all_reserved_users(b_df)
-    boss_num, boss_name, boss_hp = cb.get_current_boss()
-
-    message = "予約状況はこんな感じね。\n```\n"
-    for k, b in zip(user_dict, b_df):
-        if k == boss_num:
-            message += "【" + str(k) + "】(目安:" + str(b[2]) + ")" + " ←イマココ(残り、" + str(boss_hp) + ") \n"
-        else:
-            message += "【" + str(k) + "】(目安:" + str(b[2]) + ")\n"
-
-        for i, u in enumerate(user_dict[k]):
-            if (u in co_users_df.index):
-                message += "    " + u + " ((持ち越し:" + str(co_users_df.at[u, 'time']) + ")" + "\n"
-            else:
-                message += "    " + u + "\n"
-
-    message += "残り凸数は、" + str(cb.get_remaining_atc_count()) + "よ。\n"
-    message += "```"
-
-    print (message)
-    ###
-
-    ### 「持ち越し　114514」
-    #cb.insert_carry_over(user_id, 50)
+#    print (cb.get_bosses())
 
 
-    #a, b, c = cb.get_current_boss()
-    #cb.reserved_check('474761974832431148', 3)
-    #print (cb.get_attack_count())
-    #cb.get_today_from_and_to()
+### メンバー全員の凸数確認 ###
+#    member_attack_dic    = cb.get_today_members_attack_count()
+#    #member_attack_dic    = cb.get_yesterday_members_attack_count()
+#    three_attack_members = cb.get_three_attack_members(member_attack_dic)
+#    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+#    print (three_attack_members)
+#    print ('====')
+#    print (not_three_attack_members)
+############
+ 
+#    cb.boss_reserve(user_id, 5)
+#    print (cb.reserved_check(user_id))
+
+
+#    if cb.reserved_check(user_id):
+#        print ('reserved')
+#        cb.reserved_clear(user_id, 5)
+#    else:
+#        print ('no reserve')
+
+#    print (cb.get_all_reserved_users())
+
+#    print (cb.get_current_boss())
+#    cb.lotate_boss()
+#    print (cb.get_current_boss())
+
+### 単純な1凸 ###
+#    if not cb.attack_check(user_id):
+#        cb.attack(user_id)
+#    #cb.attack_cancel(user_id)
+#
+#    is_carry_over, is_round = cb.update_current_boss(damage)
+#    cb.finish_attack(user_id, damage, is_carry_over)
+#    if is_round:
+#        around_count = cb.get_around_count()
+#        print ('一周にかかった凸数は、' + str(around_count) + 'です。')
+#################
+
+### 周回確認 ###
+#    round_dic = cb.get_all_around_count()
+#    mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
+#    for r_key in round_dic:
+#        mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
+#    mes += '```'
+#
+#    print (mes)
+#############
+
+    #print (cb.check_carry_over('476229869001375744'))
+
+    print (cb.get_attack_count())
+    print (cb.get_remaining_atc_count())
+
+#    cb.insert_carry_over(user_id, boss_num, time)
+#    print (cb.get_carry_over_users())
 
 
 
