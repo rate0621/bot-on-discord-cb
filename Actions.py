@@ -37,7 +37,7 @@ CLANBATTLE_HELP = '''
 
 ### 予約確認 「予約確認」
     誰々が予約しているかが表示される。
-    ついでに各ボスの目安ダメージも表示される。
+    ついでに各ボスの目標凸数も表示される。
 
 ### 凸数確認　「凸数確認」
     その日の凸数が表示される。
@@ -174,9 +174,9 @@ class Actions:
                 message = "予約状況はこんな感じね。\n```\n"
                 for k, b in zip(user_dict, b_array):
                     if k == cb_dict['boss_id']:
-                        message += "【" + str(k) + "】(目安:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
+                        message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
                     else:
-                        message += "【" + str(k) + "】(目安:" + str(b['target']) + ")\n"
+                        message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")\n"
 
                     for i, u in enumerate(user_dict[k]):
                         if (u in co_users):
