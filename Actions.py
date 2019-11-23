@@ -284,8 +284,15 @@ class Actions:
                 cb = ClanBattle.ClanBattle()
                 cb.lotate_boss()
                 cb_dict = cb.get_current_boss()
+
+                user_list = cb.get_reserved_users(cb_dict['boss_id'])
+                call_message = cb_dict['boss_name'] + "の時間よー！\n"
+                if not user_list == []:
+                    for u in user_list:
+                        call_message += req.server.get_member(u['member_id']).mention
+
                 self.res_type = 'text'
-                self.res      = '現在のボス情報を' + cb_dict['boss_name'] + 'に更新しておいたわ。'
+                self.res      = call_message
 
             if re.search("^周回確認$", req.content):
                 cb = ClanBattle.ClanBattle()
