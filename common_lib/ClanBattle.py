@@ -374,12 +374,10 @@ class ClanBattle():
             LEFT JOIN( \
                 SELECT \
                     member_id, \
-                    COUNT(member_id) attack_count \
+                    SUM(attack_weight) attack_count \
                 FROM \
                     attack_log \
                 WHERE \
-                    is_carry_over = 0 \
-                    AND \
                     attack_time BETWEEN %s AND %s \
                 GROUP BY \
                     member_id \
@@ -427,12 +425,12 @@ if __name__ == '__main__':
 
 ### メンバー全員の凸数確認 ###
 #    member_attack_dic    = cb.get_today_members_attack_count()
-#    #member_attack_dic    = cb.get_yesterday_members_attack_count()
+    member_attack_dic    = cb.get_yesterday_members_attack_count()
 #    three_attack_members = cb.get_three_attack_members(member_attack_dic)
-#    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
 #    print (three_attack_members)
 #    print ('====')
-#    print (not_three_attack_members)
+    print (not_three_attack_members)
 ############
  
 #    cb.boss_reserve(user_id, 5)
@@ -475,7 +473,7 @@ if __name__ == '__main__':
 
     #print (cb.check_carry_over('476229869001375744'))
 
-    print (cb.get_attack_count())
+    #print (cb.get_attack_count())
     #print (cb.get_remaining_atc_count())
 
 #    cb.insert_carry_over(user_id, boss_num, time)
