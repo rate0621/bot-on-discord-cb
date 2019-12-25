@@ -40,8 +40,12 @@ class ClanBattle():
 
     def get_month_from_and_to(self):
         this_month = date.today()
-        f = date(this_month.year, this_month.month, 1)
-        t = date(this_month.year, this_month.month+1, 1) - timedelta(days=1)
+        if this_month.month == 12:
+            f = date(this_month.year, this_month.month, 1)
+            t = date(this_month.year, this_month.month, 31)
+        else:
+            f = date(this_month.year, this_month.month, 1)
+            t = date(this_month.year, this_month.month+1, 1) - timedelta(days=1)
 
         return f, t
 
@@ -415,6 +419,11 @@ class ClanBattle():
 
 if __name__ == '__main__':
     cb = ClanBattle()
+    a, b = cb.get_month_from_and_to()
+    print (a)
+    print (b)
+    exit()
+    
     user_id = '474761974832431148'
     #user_id =  '478542546537283594'
     #user_id =  '523048909833109504'
