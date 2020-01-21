@@ -40,8 +40,12 @@ class ClanBattle():
 
     def get_month_from_and_to(self):
         this_month = date.today()
-        f = date(this_month.year, this_month.month, 1)
-        t = date(this_month.year, this_month.month+1, 1) - timedelta(days=1)
+        if this_month.month == 12:
+            f = date(this_month.year, this_month.month, 1)
+            t = date(this_month.year, this_month.month, 31)
+        else:
+            f = date(this_month.year, this_month.month, 1)
+            t = date(this_month.year, this_month.month+1, 1) - timedelta(days=1)
 
         return f, t
 
@@ -298,10 +302,11 @@ class ClanBattle():
 
     def get_around_count(self):
         cb_dict = self.get_current_boss()
+        f, t = self.get_month_from_and_to()
         target_loop_count = cb_dict['loop_count'] - 1
 
         cur = self.conn.cursor()
-        cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE loop_count = %s GROUP BY loop_count", (target_loop_count,))
+        cur.execute("SELECT SUM(attack_weight) FROM attack_log WHERE attack_time BETWEEN %s AND %s AND loop_count = %s GROUP BY loop_count", (f, t, target_loop_count))
 
         around_attack_count = cur.fetchone()[0]
         return around_attack_count
@@ -413,6 +418,10 @@ class ClanBattle():
 
 if __name__ == '__main__':
     cb = ClanBattle()
+    a = cb.get_around_count()
+    print (a)
+    exit()
+    
     user_id = '474761974832431148'
     #user_id =  '478542546537283594'
     #user_id =  '523048909833109504'
