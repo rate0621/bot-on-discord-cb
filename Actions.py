@@ -75,7 +75,7 @@ class Actions:
                     self.res = 'すでに凸宣言済みのようね。'
                 else:
                     cb_dict = cb.get_current_boss()
-                    self.res = req.author.name + 'が' + cb_dict['boss_name'] + 'に凸するわ。自分を信じていってらっしゃい。'
+                    self.res = req.author.name + 'が' + cb_dict['boss_name'] + 'に凸するわ。'
 
                     cb.attack(req.author.id)
 
@@ -139,7 +139,7 @@ class Actions:
                 cb.boss_reserve(str(req.author.id), int(boss_number))
 
                 self.res_type = 'text'
-                self.res      = '予約完了。ボスが回ってきたら教えてあげるわ。'
+                self.res      = '予約完了。ボスが回ってきたら教えてあげるわ。すぐに凸れるように模擬はしておくのよ。'
 
                 return self.res_type, self.res
 
