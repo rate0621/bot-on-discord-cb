@@ -194,7 +194,16 @@ class ClanBattle():
         '''
         ダメージ情報を更新
         '''
+
+        f, t = self.get_today_from_and_to()
+
         cur = self.conn.cursor()
+        cur.execute("SELECT attack_weight FROM attack_log WHERE member_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+        attack_weight = cur.fetchone()
+
+        if attack_weight[0] == 0.5:
+            is_carry_over = 0
+
         if is_carry_over:
             cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s, attack_weight = 0.5 WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
         else:
@@ -418,28 +427,25 @@ class ClanBattle():
 
 if __name__ == '__main__':
     cb = ClanBattle()
-    a = cb.get_around_count()
-    print (a)
-    exit()
     
     user_id = '474761974832431148'
     #user_id =  '478542546537283594'
     #user_id =  '523048909833109504'
     boss_num = 2
     time = 50
-    damage = 7000000
+    damage = 15000000
 
 #    print (cb.get_bosses())
 
 
 ### メンバー全員の凸数確認 ###
 #    member_attack_dic    = cb.get_today_members_attack_count()
-    member_attack_dic    = cb.get_yesterday_members_attack_count()
+#    member_attack_dic    = cb.get_yesterday_members_attack_count()
 #    three_attack_members = cb.get_three_attack_members(member_attack_dic)
-    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
+#    not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
 #    print (three_attack_members)
 #    print ('====')
-    print (not_three_attack_members)
+#    print (not_three_attack_members)
 ############
  
 #    cb.boss_reserve(user_id, 5)
@@ -459,12 +465,12 @@ if __name__ == '__main__':
 #    print (cb.get_current_boss())
 
 ### 単純な1凸 ###
-#    if not cb.attack_check(user_id):
-#        cb.attack(user_id)
-#    #cb.attack_cancel(user_id)
-#
-#    is_carry_over, is_round = cb.update_current_boss(damage)
-#    cb.finish_attack(user_id, damage, is_carry_over)
+    if not cb.attack_check(user_id):
+        cb.attack(user_id)
+    #cb.attack_cancel(user_id)
+
+    is_carry_over, is_round = cb.update_current_boss(damage)
+    cb.finish_attack(user_id, damage, is_carry_over)
 #    if is_round:
 #        around_count = cb.get_around_count()
 #        print ('一周にかかった凸数は、' + str(around_count) + 'です。')
