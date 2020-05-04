@@ -3,6 +3,7 @@
 __pycache__
 discord/
 env.sh
+env.sh.bk
 last_stamp_time.txt
 err.log
 out.log

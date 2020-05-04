@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime, timedelta, date
 import calendar
 import MySQLdb
+import math
 from contextlib import closing
 
 here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
@@ -423,6 +424,18 @@ class ClanBattle():
                 m_array.append(ma_dic[user_id]['member_name'] + '  残り:' + str(3 - ma_dic[user_id]['attack_count']))
 
         return m_array
+
+    def get_carry_time(self, damages):
+        time      = 0
+        hit_point = self.get_current_boss()['hit_point']
+        for d in damages:
+            d = d * 10000
+            if hit_point > d:
+                hit_point = hit_point - d
+            else:
+                time = math.ceil(90 - (hit_point * 90 / d - 20))
+
+        return time
 
 
 if __name__ == '__main__':

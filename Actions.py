@@ -306,6 +306,22 @@ class Actions:
                 self.res_type = 'text'
                 self.res      = mes
 
+            if re.search("^持ち越し計算", req.content):
+                cb      = ClanBattle.ClanBattle()
+                cb_dict = cb.get_current_boss()
+                # 与えられたメッセージから、数値の部分だけ抽出
+                damages = []
+                [damages.append(int(s)) for s in req.content.split() if s.isdigit()]
+
+                carry_time = cb.get_carry_time(damages)
+                if carry_time == 0:
+                    mes = 'そもそも討伐すらできなさそうよ。もうちょい頑張って、応援してるわ。'
+                else:
+                    mes = '今のボスのHPが' + str(cb_dict['hit_point']) + "\nその順番で通すとだいたい" + str(carry_time) + "秒の持ち越しになりそうね。"
+
+                self.res_type = 'text'
+                self.res      = mes
+
             if re.search("^ヘルプ$", req.content):
                 self.res_type = 'text'
                 self.res      = CLANBATTLE_HELP
