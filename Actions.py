@@ -72,7 +72,7 @@ class Actions:
 
         # クラバト関連のアクションはここ
         CLANBATTLE_CHANNEL = os.getenv("CLANBATTLE_CHANNEL", "")
-        if req.channel.id == CLANBATTLE_CHANNEL:
+        if str(req.channel.id) == CLANBATTLE_CHANNEL:
             if re.search("^凸$", req.content):
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
