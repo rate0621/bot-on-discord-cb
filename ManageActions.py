@@ -36,7 +36,7 @@ class ManageActions:
                 cur.execute("TRUNCATE TABLE clan_members")
                 cur.execute("set foreign_key_checks = 1")
 
-                for m in req.server.members:
+                for m in req.guild.members:
                     is_member = 0
                     for r in m.roles:
                         # TODO:環境変数からとってくるようにする
