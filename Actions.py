@@ -3,6 +3,7 @@ import random
 from datetime import datetime, timedelta, timezone
 import discord
 import gspread
+import response.Priconne as Pri
 
 import common_lib.ClanBattle as ClanBattle
 
@@ -77,10 +78,10 @@ class Actions:
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
                 if cb.attack_check(str(req.author.id)):
-                    self.res = 'すでに凸宣言済みのようね。'
+                    self.res = Pri.SENGENZUMI
                 else:
                     cb_dict = cb.get_current_boss()
-                    self.res = req.author.name + 'が' + cb_dict['boss_name'] + 'に凸するわ。'
+                    self.res = req.author.name + 'が' + cb_dict['boss_name'] + Pri.TOTU_SURUWA
 
                     cb.attack(req.author.id)
 
@@ -112,24 +113,24 @@ class Actions:
                     suf_message = ''
                     if is_defeat:
                         user_list = cb.get_reserved_users(cb_dict['boss_id'])
-                        call_message = cb_dict['boss_name'] + "の時間よー！\n"
+                        call_message = cb_dict['boss_name'] + Pri.JIKAN_YO + "\n"
                         if not user_list == []:
                             for u in user_list:
-                                call_message += req.server.get_member(u['member_id']).mention
+                                call_message += req.guild.get_member(int(u['member_id'])).mention
 
                         suf_message = call_message
                     else:
-                        suf_message = cb_dict['boss_name'] + '残り' + str(cb_dict['hit_point']) + 'よ。'
+                        suf_message = cb_dict['boss_name'] + '残り' + str(cb_dict['hit_point']) + Pri.NOKORI_YO
 
                     cb.finish_attack(str(req.author.id), int(damage), is_defeat)
 
                     if is_around:
                         around_count = cb.get_around_count()
-                        suf_message += 'ちなみにこの' + str(cb_dict['loop_count'] - 1) + '週目の討伐にかかった凸数は、' + str(around_count) + 'よ。'
+                        suf_message += 'ちなみにこの' + str(cb_dict['loop_count'] - 1) + '週目の討伐にかかった凸数は、' + str(around_count) + Pri.TOTSUSUU_YO
 
-                    self.res = 'お疲れさま！' + "\n" + suf_message
+                    self.res = Pri.OTSUKARE_SAMA + "\n" + suf_message
                 else:
-                    self.res = '凸宣言していないようね。'
+                    self.res = Pri.SENGEN_SITENAI
                     
 
                 return self.res_type, self.res
@@ -144,7 +145,7 @@ class Actions:
                 cb.boss_reserve(str(req.author.id), int(boss_number))
 
                 self.res_type = 'text'
-                self.res      = '予約完了。ボスが回ってきたら教えてあげるわ。すぐに凸れるように模擬はしておくのよ。'
+                self.res      = Pri.YOYAKU_KANRYOU
 
                 return self.res_type, self.res
 
@@ -161,10 +162,10 @@ class Actions:
 
                 if cb.reserved_check(str(req.author.id), boss_number):
                     cb.reserved_cancel(str(req.author.id), boss_number)
-                    self.res = '予約キャンセルしておいたわよ'
+                    self.res = Pri.YOYAKU_CANCEL
 
                 else:
-                    self.res = 'あなた予約していないわよ。寝ぼけてるの？'
+                    self.res = Pri.YOYAKU_SITENAI
                     
                 return self.res_type, self.res
 
@@ -176,7 +177,7 @@ class Actions:
                 user_dict   = cb.get_all_reserved_users()
                 cb_dict     = cb.get_current_boss()
 
-                message = "予約状況はこんな感じね。\n```\n"
+                message = Pri.YOYAKU_JOUKYOU + "\n```\n"
                 for k, b in zip(user_dict, b_array):
                     if k == cb_dict['boss_id']:
                         message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
@@ -189,7 +190,7 @@ class Actions:
                         else:
                             message += "    " + u + "\n"
 
-                message += "残り凸数は、" + str(cb.get_remaining_atc_count()) + "よ。\n"
+                message += "残り凸数は、" + str(cb.get_remaining_atc_count()) + Pri.NOKORI_YO + "\n"
                 message += "```"
 
                 self.res_type = 'text'
@@ -203,18 +204,17 @@ class Actions:
                 if cb.attack_check(str(req.author.id)):
                     cb.attack_cancel(str(req.author.id))
                     self.res_type = 'text'
-                    self.res      = '凸宣言キャンセルしておいたわよ'
-
+                    self.res      = Pri.TOTU_CANCEL
                 else:
                     self.res_type = 'text'
-                    self.res      = '・・・そもそもあなた凸宣言してないわよ'
+                    self.res      = Pri.TOTU_SENGEN_NASHI
 
                 return self.res_type, self.res
 
             if re.search("^凸数確認$", req.content):
                 cb = ClanBattle.ClanBattle()
                 attack_count = cb.get_attack_count()
-                mes = '今日は今のところ' + str(attack_count) + '凸ね(持ち越しはカウントしてないからね)'
+                mes = Pri.TOTSUSU_KAKUNIN_NOW + str(attack_count) + Pri.TOTSUSU_KAKUNIN_TOTSUNE
 
                 self.res_type = 'text'
                 self.res      = mes
@@ -236,7 +236,7 @@ class Actions:
                 cb.insert_carry_over(str(req.author.id), last_boss_number, int(time))
 
                 self.res_type = 'text'
-                self.res      = '持ち越し時間把握したわ。吐く場所はしっかり考えておくのよ。'
+                self.res      = Pri.MOCHIKOSHI_HAAKU
 
                 return self.res_type, self.res
                     
@@ -246,9 +246,9 @@ class Actions:
                 three_attack_members = cb.get_three_attack_members(member_attack_dic)
 
                 if three_attack_members == []:
-                    message = "今日はまだ誰も３凸終えてないわね。・・・大丈夫・・・？"
+                    message = Pri.ALL_MITOTSU
                 else:
-                    message = "今日完凸してるメンバーは以下よ\n```\n"
+                    message = Pri.KANTOTSU_MEMBERS + "\n```\n"
                     for m in three_attack_members:
                         message += m + "\n"
 
@@ -262,7 +262,7 @@ class Actions:
                 member_attack_dic = cb.get_today_members_attack_count()
                 not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
 
-                message = "今日まだ未完凸のメンバーは以下よ\n```\n"
+                message = Pri.MITOTSU_MEMBERS + "\n```\n"
                 for m in not_three_attack_members:
                     message += m + "\n"
 
@@ -276,11 +276,11 @@ class Actions:
                 member_attack_dic = cb.get_yesterday_members_attack_count()
                 not_three_attack_members = cb.get_not_three_attack_members(member_attack_dic)
 
-                message = "昨日３凸出来なかったメンバーは以下よ。\nただ、持ち越しで処理した場合は凸としてカウントされないからね。```\n"
+                message = Pri.ZENJITSU_MIKANTOTSU + "\n```\n"
                 for m in not_three_attack_members:
                     message += m + "\n"
 
-                message += "```\nもし、持ち越しで処理とかしてないのに「３凸したのに表示されてるよ！」って人がいたらクラマスに文句を言うといいわ。\nまた、完凸できてた場合に表示してほしいご褒美画像があれば募集してるそうよ。・・・ビキニ以外でね・・・。"
+                message += "```"
 
                 self.res_type = 'text'
                 self.res      = message
@@ -291,10 +291,11 @@ class Actions:
                 cb_dict = cb.get_current_boss()
 
                 user_list = cb.get_reserved_users(cb_dict['boss_id'])
-                call_message = cb_dict['boss_name'] + "の時間よー！\n"
+                call_message = cb_dict['boss_name'] + Pri.JIKAN_YO + "\n"
                 if not user_list == []:
                     for u in user_list:
-                        call_message += req.server.get_member(u['member_id']).mention
+                        print (req.guild.get_member(int(u['member_id'])))
+                        call_message += req.guild.get_member(int(u['member_id'])).mention
 
                 self.res_type = 'text'
                 self.res      = call_message
@@ -302,7 +303,7 @@ class Actions:
             if re.search("^周回確認$", req.content):
                 cb = ClanBattle.ClanBattle()
                 round_dic = cb.get_all_around_count()
-                mes = "各周にかかった凸数はこちら。" + "\n" + '```' + "\n"
+                mes = Pri.SHUKAI_KAKUNIN + "\n" + '```' + "\n"
                 for r_key in round_dic:
                     mes += str(r_key) + '週目=> ' + str(round_dic[r_key]['attack_count']) + "\n"
 
@@ -320,9 +321,9 @@ class Actions:
 
                 carry_time = cb.get_carry_time(damages)
                 if carry_time == 0:
-                    mes = 'そもそも討伐すらできなさそうよ。もうちょい頑張って、応援してるわ。'
+                    mes = Pri.TOUBATSU_HUKA
                 else:
-                    mes = '今のボスのHPが' + str(cb_dict['hit_point']) + "\nその順番で通すとだいたい" + str(carry_time) + "秒の持ち越しになりそうね。"
+                    mes = Pri.MOCHIKOSHI_TIME_NOW_HP + str(cb_dict['hit_point']) + "\n" + Pri.MOCHIKOSHI_TIME_SONOJUNBAN + str(carry_time) + Pri.MOCHIKOSHI_TIME_BYO_NO_MOCHIKOSHI
 
                 self.res_type = 'text'
                 self.res      = mes

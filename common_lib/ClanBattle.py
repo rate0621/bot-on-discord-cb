@@ -434,6 +434,7 @@ class ClanBattle():
                 hit_point = hit_point - d
             else:
                 time = math.ceil(90 - (hit_point * 90 / d - 20))
+                break
 
         return time
 
