@@ -40,7 +40,7 @@ class ManageActions:
                     is_member = 0
                     for r in m.roles:
                         # TODO:環境変数からとってくるようにする
-                        if r.id == '631094092050202626':
+                        if str(r.id) == '631094092050202626':
                             is_member = 1
 
                     cur.execute("INSERT INTO clan_members (member_id, member_name, is_member) VALUES (%s, %s, %s)", (m.id, m.name, is_member))
