@@ -438,6 +438,48 @@ class ClanBattle():
 
         return time
 
+    def get_damage_memo(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_members cm ON dm.member_id = cm.member_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo WHERE damage <> 0 GROUP BY message_id, member_id)")
+
+        l = []
+        rows = cur.fetchall()
+        for row in rows:
+            l.append({'message_id': row[0], 'damage': row[1], 'member_name': row[2], 'said_time': row[3]})
+
+        return l
+
+#        if cur.rowcount > 0:
+#            r = cur.fetchone()
+#            d = {'message_id': r[0], 'damage': r[1], 'member_id': r[2]}
+#            return d
+#        else:
+#            return None
+
+
+    def get_damage_memo_message_id(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT message_id FROM damage_memo LIMIT 1")
+
+        r = cur.fetchone()
+        return r[0] if r is not None else 0
+
+
+    def is_damage_memo_empty(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT message_id, damage, member_id FROM damage_memo")
+        return True if cur.rowcount == 0 else False
+
+    def insert_damage_memo(self, message_id, user_id=None, damage=0):
+        said_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+        cur = self.conn.cursor()
+        cur.execute("INSERT INTO damage_memo (message_id, member_id, damage, said_time) VALUES (%s, %s, %s, %s)", (message_id, user_id, damage, said_time))
+        self.conn.commit()
+
+    def truncate_damage_memo(self):
+        cur = self.conn.cursor()
+        cur.execute("TRUNCATE TABLE damage_memo")
+
 
 if __name__ == '__main__':
     cb = ClanBattle()
