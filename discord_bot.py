@@ -35,7 +35,7 @@ async def on_raw_reaction_add(payload):
         m_id = cb.get_damage_memo_message_id()
         if payload.message_id == int(m_id) and payload.emoji.name == emoji.emojize(':bikini:'):
             target_message_id = await client.get_channel(int(CLANBATTLE_DAMAGELOG_CHANNEL)).fetch_message(payload.message_id)
-            await target_message_id.delete()
+            await target_message_id.edit(content='お疲れ様！ダメージメモを閉じますわ。', suppress=True)
             cb.truncate_damage_memo()
         
 #        guild_id = payload.guild_id
