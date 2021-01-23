@@ -382,6 +382,7 @@ class Actions:
                 dm_list = cb.get_damage_memo()
                 sum_damage = 0
                 for dm in dm_list:
+                    if dm['damage'] == 0: continue
                     mes += dm['member_name'] + ': ' + str(dm['damage']) + "\n"
                     sum_damage = sum_damage + dm['damage']
                 sum_damage = sum_damage * 10000

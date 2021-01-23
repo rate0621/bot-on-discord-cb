@@ -440,7 +440,7 @@ class ClanBattle():
 
     def get_damage_memo(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_members cm ON dm.member_id = cm.member_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo WHERE damage <> 0 GROUP BY message_id, member_id)")
+        cur.execute("SELECT dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_members cm ON dm.member_id = cm.member_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo GROUP BY message_id, member_id)")
 
         l = []
         rows = cur.fetchall()
