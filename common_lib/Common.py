@@ -5,7 +5,7 @@ import json
 import re
 import os, sys
 import random
-import pandas as pd
+#import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 
 # gspreadはpip installで入れられるやつだが、

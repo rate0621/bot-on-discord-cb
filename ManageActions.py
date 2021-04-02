@@ -1,7 +1,6 @@
 import os, re
 from datetime import datetime, timedelta, timezone
 import discord
-import pandas as pd
 import MySQLdb
 from contextlib import closing
 
