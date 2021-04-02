@@ -60,6 +60,12 @@ CLANBATTLE_HELP = '''
     上記の例だと、500万→400万の順番で叩いたときの持ち越し時間が表示される。
     入力した値に10000かけた値で計算する点に注意。
 
+### （ダメージメモ板で）「ダメージメモ」
+    「ダメージメモ」と打つとアキノさんがメモを開いてくれる。
+    その状態で「900」とか「100」とだけ打つとダメージメモにそれを反映してくれる。（投稿したダメージは消える）
+   もし投稿したあとに凸を通したりしたら「0」を打てばダメージメモ上から自分のダメージが消える。
+   bikiniを押すとアキノさんがダメージメモを閉じる。
+
 ```
 '''
 
@@ -344,8 +350,61 @@ class Actions:
                 self.res      = CLANBATTLE_HELP
                 return self.res_type, self.res
 
+        CLANBATTLE_DAMAGELOG_CHANNEL = os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL", "")
+        if str(req.channel.id) == CLANBATTLE_DAMAGELOG_CHANNEL:
+            cb = ClanBattle.ClanBattle()
+            dm = cb.is_damage_memo_empty()
+            if re.search("^ダメージメモ$", req.content):
+                if cb.is_damage_memo_empty() is True:
+                    # ダメージメモのレコード作成時は、一度メッセージを投稿してからじゃないと、
+                    # これからeditしていくメッセージのIDが拾えないため投稿後に、レコードを作成する。
+                    cb_dict = cb.get_current_boss()
+                    self.res_type = 'damage_memo'
+                    self.res      = "さて、皆様いくら献上いただけるのかしら？\n```\n" + cb_dict['boss_name'] + '残りHP：' + str(cb_dict['hit_point']) + "\n```"
+                    return self.res_type, self.res
+                else:
+                    self.res_type = 'text'
+                    self.res      = "すでにダメージメモを開いてるようですわ。"
+                    return self.res_type, self.res
+
+            if re.search("^\d+$", req.content):
+                if cb.is_damage_memo_empty() is True:
+                    # ダメージメモのレコード作成時は、一度メッセージを投稿してからじゃないと、
+                    # これからeditしていくメッセージのIDが拾えないため投稿後に、レコードを作成する。
+                    self.res_type = 'text'
+                    self.res      = "ダメージメモが開かれてないみたいですわ。 `ダメージメモ` と高らかに宣言してくださいまし。"
+                    return self.res_type, self.res
+
+                damage = re.search("^(\d+)$", req.content).group(1)
+                # 半角に置換
+                damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
+                m_id = cb.get_damage_memo_message_id()
+                cb.insert_damage_memo(message_id=m_id, user_id=req.author.id, damage=damage)
+
+                cb_dict = cb.get_current_boss()
+                mes = "さて、皆様いくら献上いただけるのかしら？\n```\n" + cb_dict['boss_name'] + '残りHP：' + str(cb_dict['hit_point']) + "\n"
+
+                dm_list = cb.get_damage_memo()
+                sum_damage = 0
+                for dm in dm_list:
+                    if dm['damage'] == 0: continue
+                    mes += dm['member_name'] + ': ' + str(dm['damage']) + "\n"
+                    sum_damage = sum_damage + dm['damage']
+                sum_damage = sum_damage * 10000
+                mes += "--------\n予測ボス残りHP： " + str(cb_dict['hit_point'] - sum_damage) + "\n"
+                mes += "```"
+
+                self.res_type = 'edit'
+                self.res = mes
+                return self.res_type, self.res
+                
+
         return self.res_type, self.res
                 
+    def insert_damage_memo(self, m):
+        cb = ClanBattle.ClanBattle()
+        cb.insert_damage_memo(message_id=m.id, user_id=m.author.id)
 
 
 if __name__ == '__main__':
