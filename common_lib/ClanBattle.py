@@ -22,6 +22,45 @@ class ClanBattle():
             "charset" : os.getenv("DB_CHARSET", ""),
         }
 
+        self.BOSSHP_MASTER = {
+            'LEVEL1': {
+                1: 600,
+                2: 800,
+                3: 1000,
+                4: 1200,
+                5: 1500,
+            },
+            'LEVEL2': {
+                1: 600,
+                2: 800,
+                3: 1000,
+                4: 1200,
+                5: 1500,
+            },
+            'LEVEL3': {
+                1: 700,
+                2: 900,
+                3: 1300,
+                4: 1500,
+                5: 2000,
+            },
+            'LEVEL4': {
+                1: 1700,
+                2: 1800,
+                3: 2000,
+                4: 2100,
+                5: 2300,
+            },
+            'LEVEL5': {
+                1: 8500,
+                2: 9000,
+                3: 9500,
+                4: 10000,
+                5: 11000,
+            },
+        }
+
+
         self.conn = MySQLdb.connect(**args)
 
 
@@ -440,12 +479,12 @@ class ClanBattle():
 
     def get_damage_memo(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_members cm ON dm.member_id = cm.member_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo GROUP BY message_id, member_id)")
+        cur.execute("SELECT dm.id, dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_members cm ON dm.member_id = cm.member_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo GROUP BY message_id, member_id)")
 
         l = []
         rows = cur.fetchall()
         for row in rows:
-            l.append({'message_id': row[0], 'damage': row[1], 'member_name': row[2], 'said_time': row[3]})
+            l.append({'id': row[0], 'message_id': row[1], 'damage': row[2], 'member_name': row[3], 'said_time': row[4]})
 
         return l
 
@@ -480,6 +519,45 @@ class ClanBattle():
         cur = self.conn.cursor()
         cur.execute("TRUNCATE TABLE damage_memo")
 
+    def delete_damage_memo(self, member_id):
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM damage_memo WHERE member_id = %s", (member_id,))
+        self.conn.commit()
+
+    def get_member_id_from_damege_memo_id(self, damage_memo_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT DISTINCT member_id FROM damage_memo WHERE id = %s", (damage_memo_id,))
+        r = cur.fetchone()
+        return r[0] if r is not None else 0
+
+    def update_boss_hp(self, level):
+        level_key = 'LEVEL' + str(level)
+
+        cur = self.conn.cursor()
+        print ('ボスのマスタを更新')
+        for boss_num in self.BOSSHP_MASTER[level_key]:
+            cur.execute("UPDATE boss SET max_hit_point = %s WHERE boss_id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
+            self.conn.commit()
+
+        # NOTE: current_bossはマスタが更新される前に更新されてしまっているため、このタイミングでマスタのHPをあわせる
+        print ('current_bossの内容を更新')
+        cur.execute("UPDATE current_boss SET hit_point = %s WHERE boss_id = 1", (self.BOSSHP_MASTER[level_key][1] * 10000,))
+        self.conn.commit()
+        
+
+    def get_boss_level(self, loop_count):
+        if loop_count >= 1 and loop_count <= 3:
+            return 1
+        elif loop_count >= 4 and loop_count <= 10:
+            return 2
+        elif loop_count >= 11 and loop_count <= 34:
+            return 3
+        elif loop_count >= 35 and loop_count <= 44:
+            return 4
+        elif loop_count >= 45:
+            return 5
+        else:
+            return 0
 
 if __name__ == '__main__':
     cb = ClanBattle()

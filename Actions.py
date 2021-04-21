@@ -134,6 +134,10 @@ class Actions:
                         around_count = cb.get_around_count()
                         suf_message += 'ちなみにこの' + str(cb_dict['loop_count'] - 1) + '週目の討伐にかかった凸数は、' + str(around_count) + Pri.TOTSUSUU_YO
 
+                        boss_level = cb.get_boss_level(cb_dict['loop_count'])
+                        cb.update_boss_hp(boss_level)
+
+
                     self.res = Pri.OTSUKARE_SAMA + "\n" + suf_message
                 else:
                     self.res = Pri.SENGEN_SITENAI
@@ -314,6 +318,9 @@ class Actions:
                         print (req.guild.get_member(int(u['member_id'])))
                         call_message += req.guild.get_member(int(u['member_id'])).mention
 
+                boss_level = cb.get_boss_level(cb_dict['loop_count'])
+                cb.update_boss_hp(boss_level)
+
                 self.res_type = 'text'
                 self.res      = call_message
 
@@ -389,7 +396,7 @@ class Actions:
                 sum_damage = 0
                 for dm in dm_list:
                     if dm['damage'] == 0: continue
-                    mes += dm['member_name'] + ': ' + str(dm['damage']) + "\n"
+                    mes += str(dm['id']) + '.' + dm['member_name'] + ': ' + str(dm['damage']) + "\n"
                     sum_damage = sum_damage + dm['damage']
                 sum_damage = sum_damage * 10000
                 mes += "--------\n予測ボス残りHP： " + str(cb_dict['hit_point'] - sum_damage) + "\n"
@@ -398,8 +405,38 @@ class Actions:
                 self.res_type = 'edit'
                 self.res = mes
                 return self.res_type, self.res
-                
 
+            if re.search("^削除\s+\d+$", req.content):
+                if cb.is_damage_memo_empty() is True:
+                    # ダメージメモのレコード作成時は、一度メッセージを投稿してからじゃないと、
+                    # これからeditしていくメッセージのIDが拾えないため投稿後に、レコードを作成する。
+                    self.res_type = 'text'
+                    self.res      = "ダメージメモが開かれてないみたいですわ。 `ダメージメモ` と高らかに宣言してくださいまし。"
+                    return self.res_type, self.res
+
+                m = re.search("^削除\s+(\d+)$", req.content)
+                delete_id = m.group(1)
+                delete_member_id = cb.get_member_id_from_damege_memo_id(delete_id)
+                cb.delete_damage_memo(delete_member_id)
+
+                cb_dict = cb.get_current_boss()
+                mes = "さて、皆様いくら献上いただけるのかしら？\n```\n" + cb_dict['boss_name'] + '残りHP：' + str(cb_dict['hit_point']) + "\n"
+
+                dm_list = cb.get_damage_memo()
+                sum_damage = 0
+                for dm in dm_list:
+                    if dm['damage'] == 0: continue
+                    mes += str(dm['id']) + '.' + dm['member_name'] + ': ' + str(dm['damage']) + "\n"
+                    sum_damage = sum_damage + dm['damage']
+                sum_damage = sum_damage * 10000
+                mes += "--------\n予測ボス残りHP： " + str(cb_dict['hit_point'] - sum_damage) + "\n"
+                mes += "```"
+
+                self.res_type = 'edit'
+                self.res = mes
+                return self.res_type, self.res
+
+                
         return self.res_type, self.res
                 
     def insert_damage_memo(self, m):
