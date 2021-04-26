@@ -84,7 +84,7 @@ class Actions:
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
                 if cb.attack_check(str(req.author.id)):
-                    self.res = Pri.SENGENZUMI
+                    self.res = Pri.SENGEN_ZUMI
                 else:
                     cb_dict = cb.get_current_boss()
                     self.res = req.author.name + 'が' + cb_dict['boss_name'] + Pri.TOTU_SURUWA
