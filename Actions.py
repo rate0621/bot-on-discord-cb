@@ -191,9 +191,9 @@ class Actions:
                 if cb_dict['loop_count'] <= 3:
                     message += "現在:1段階目 " + str(cb_dict['loop_count']) + "週目" + "(2段階目は4〜10)\n"
                 elif cb_dict['loop_count'] <= 10:
-                    message += "現在:2段階目 " + str(cb_dict['loop_count']) + "週目" + "(3段階目は11〜34)\n"
-                elif cb_dict['loop_count'] <= 34:
-                    message += "現在:3段階目 " + str(cb_dict['loop_count']) + "週目" + "(4段階目は35〜44)\n"
+                    message += "現在:2段階目 " + str(cb_dict['loop_count']) + "週目" + "(3段階目は11〜30)\n"
+                elif cb_dict['loop_count'] <= 31:
+                    message += "現在:3段階目 " + str(cb_dict['loop_count']) + "週目" + "(4段階目は31〜44)\n"
                 elif cb_dict['loop_count'] <= 44:
                     message += "現在:4段階目 " + str(cb_dict['loop_count']) + "週目" + "(5段階目は45〜)\n"
                 else:
