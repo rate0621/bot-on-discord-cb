@@ -32,7 +32,7 @@ class ManageActions:
             with closing(MySQLdb.connect(**args)) as conn:
                 cur = conn.cursor()
                 cur.execute("set foreign_key_checks = 0")
-                cur.execute("TRUNCATE TABLE clan_members")
+                cur.execute("TRUNCATE TABLE clan_member")
                 cur.execute("set foreign_key_checks = 1")
 
                 for m in req.guild.members:
