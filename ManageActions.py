@@ -42,7 +42,7 @@ class ManageActions:
                         if str(r.id) == '631094092050202626':
                             is_member = 1
 
-                    cur.execute("INSERT INTO clan_members (member_id, member_name, is_member) VALUES (%s, %s, %s)", (m.id, m.name, is_member))
+                    cur.execute("INSERT INTO clan_member (discord_user_id, member_name, is_member) VALUES (%s, %s, %s)", (m.id, m.name, is_member))
 
                 conn.commit()
 
