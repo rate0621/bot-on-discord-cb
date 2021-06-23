@@ -97,10 +97,10 @@ class ClanBattle():
         cur = self.conn.cursor()
         #f, t = self.get_month_from_and_to()
 
-        cur.execute("SELECT boss_id, boss_name, target FROM boss")
+        cur.execute("SELECT id, boss_name, target FROM boss")
         boss_list = []
         for row in cur.fetchall():
-            boss_list.append({'boss_id': row[0], 'boss_name': row[1], 'target': row[2]})
+            boss_list.append({'id': row[0], 'boss_name': row[1], 'target': row[2]})
 
         return boss_list
 
@@ -114,7 +114,7 @@ class ClanBattle():
             print ('予約します')
 
             cur = self.conn.cursor()
-            cur.execute("INSERT INTO boss_reserve (reserved_at, member_id, boss_id, is_attack, is_cancel) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, 0))
+            cur.execute("INSERT INTO boss_reserve (reserved_at, discord_user_id, boss_id, is_attack, is_cancel) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, 0))
 
             self.conn.commit()
             print ('予約完了')
@@ -124,10 +124,10 @@ class ClanBattle():
         cur = self.conn.cursor()
 
         if boss_num is None:
-            cur.execute("SELECT * FROM boss_reserve WHERE member_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id,))
+            cur.execute("SELECT * FROM boss_reserve WHERE discord_user_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id,))
         else:
             boss_num = int(boss_num)
-            cur.execute("SELECT * FROM boss_reserve WHERE member_id = %s AND boss_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id, boss_num))
+            cur.execute("SELECT * FROM boss_reserve WHERE discord_user_id = %s AND boss_id = %s AND is_attack = 0 AND is_cancel = 0", (user_id, boss_num))
 
         if cur.rowcount > 0:
             return True
@@ -139,7 +139,7 @@ class ClanBattle():
         予約していたユーザが凸し終わったときの処理
         '''
         cur = self.conn.cursor()
-        cur.execute("UPDATE boss_reserve SET is_attack = 1 WHERE member_id = %s AND boss_id = %s AND is_cancel = 0", (user_id, boss_num))
+        cur.execute("UPDATE boss_reserve SET is_attack = 1 WHERE discord_user_id = %s AND boss_id = %s AND is_cancel = 0", (user_id, boss_num))
         self.conn.commit()
 
 
@@ -150,20 +150,20 @@ class ClanBattle():
         cur = self.conn.cursor()
 
         if boss_num is None:
-            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE member_id = %s  AND is_attack = 0", (user_id,))
+            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE discord_user_id = %s  AND is_attack = 0", (user_id,))
         else:
-            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE member_id = %s AND boss_id = %s AND is_attack = 0", (user_id, boss_num))
+            cur.execute("UPDATE boss_reserve SET is_cancel = 1 WHERE discord_user_id = %s AND boss_id = %s AND is_attack = 0", (user_id, boss_num))
 
         self.conn.commit()
 
     def get_reserved_users(self, boss_num):
         cur = self.conn.cursor()
-        cur.execute("SELECT br.member_id, cm.member_name FROM boss_reserve br INNER JOIN clan_members cm ON br.member_id = cm.member_id WHERE boss_id = %s AND is_attack = 0 AND is_cancel = 0", (boss_num,))
+        cur.execute("SELECT br.discord_user_id, cm.member_name FROM boss_reserve br INNER JOIN clan_member cm ON br.discord_user_id = cm.discord_user_id WHERE boss_id = %s AND is_attack = 0 AND is_cancel = 0", (boss_num,))
 
         l = []
         rows = cur.fetchall()
         for row in rows:
-            l.append({'member_id': row[0], 'member_name': row[1]})
+            l.append({'discord_user_id': row[0], 'member_name': row[1]})
 
         return l
 
@@ -173,16 +173,16 @@ class ClanBattle():
 
         dic = {}
         for boss in boss_array:
-            dic.setdefault(boss['boss_id'], [])
-            for u in self.get_reserved_users(boss['boss_id']):
-                dic.setdefault(boss['boss_id'], []).append(u['member_name'])
+            dic.setdefault(boss['id'], [])
+            for u in self.get_reserved_users(boss['id']):
+                dic.setdefault(boss['id'], []).append(u['member_name'])
 
         return dic
 
 
     def get_current_boss(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT c.boss_id, b.boss_name, c.hit_point, c.loop_count FROM current_boss c INNER JOIN boss b ON c.boss_id = b.boss_id")
+        cur.execute("SELECT c.boss_id, b.boss_name, c.hit_point, c.loop_count FROM current_boss c INNER JOIN boss b ON c.boss_id = b.id")
 
         r = cur.fetchone()
         d = {'boss_id': r[0], 'boss_name': r[1], 'hit_point': r[2], 'loop_count': r[3]}
@@ -199,7 +199,7 @@ class ClanBattle():
         f, t = self.get_today_from_and_to()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT is_carry_over FROM attack_log WHERE member_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+        cur.execute("SELECT is_carry_over FROM attack_log WHERE discord_user_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
         is_carry_over = cur.fetchone()
 
         if is_carry_over is None or is_carry_over[0] == 0:
@@ -209,14 +209,14 @@ class ClanBattle():
 
 
         #cur = self.conn.cursor()
-        cur.execute("INSERT INTO attack_log (attack_time, member_id, boss_id, damage, score, is_carry_over, loop_count, attack_weight) VALUES (%s, %s, %s, 0, 0, 0, %s, %s)", (attack_time, user_id, cb_dict['boss_id'], cb_dict['loop_count'], weight))
+        cur.execute("INSERT INTO attack_log (attack_time, discord_user_id, boss_id, damage, score, is_carry_over, loop_count, attack_weight) VALUES (%s, %s, %s, 0, 0, 0, %s, %s)", (attack_time, user_id, cb_dict['boss_id'], cb_dict['loop_count'], weight))
 
         self.conn.commit()
 
 
     def attack_check(self, user_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM attack_log WHERE member_id = %s AND damage = 0", (user_id,))
+        cur.execute("SELECT * FROM attack_log WHERE discord_user_id = %s AND damage = 0", (user_id,))
 
         if cur.rowcount > 0:
             return True
@@ -226,7 +226,7 @@ class ClanBattle():
 
     def attack_cancel(self, user_id):
         cur = self.conn.cursor()
-        cur.execute("DELETE FROM attack_log WHERE member_id = %s AND damage = 0", (user_id,))
+        cur.execute("DELETE FROM attack_log WHERE discord_user_id = %s AND damage = 0", (user_id,))
         self.conn.commit()
 
 
@@ -238,16 +238,16 @@ class ClanBattle():
         f, t = self.get_today_from_and_to()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT attack_weight FROM attack_log WHERE member_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+        cur.execute("SELECT attack_weight FROM attack_log WHERE discord_user_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
         attack_weight = cur.fetchone()
 
         if attack_weight[0] == 0.5:
             is_carry_over = 0
 
         if is_carry_over:
-            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s, attack_weight = 0.5 WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
+            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s, attack_weight = 0.5 WHERE discord_user_id = %s AND damage = 0", (damage, is_carry_over, user_id))
         else:
-            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s WHERE member_id = %s AND damage = 0", (damage, is_carry_over, user_id))
+            cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s WHERE discord_user_id = %s AND damage = 0", (damage, is_carry_over, user_id))
 
         self.conn.commit()
 
@@ -295,7 +295,7 @@ class ClanBattle():
 
     def get_carry_over_users(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT cm.member_name, co.boss_id, co.time FROM carry_over co INNER JOIN clan_members cm ON co.member_id = cm.member_id WHERE co.is_attack = 0")
+        cur.execute("SELECT cm.member_name, co.boss_id, co.time FROM carry_over co INNER JOIN clan_member cm ON co.discord_user_id = cm.discord_user_id WHERE co.is_attack = 0")
 
         rows = cur.fetchall()
 
@@ -307,7 +307,7 @@ class ClanBattle():
 
     def check_carry_over(self, user_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM carry_over WHERE member_id = %s AND is_attack = 0", (user_id,))
+        cur.execute("SELECT * FROM carry_over WHERE discord_user_id = %s AND is_attack = 0", (user_id,))
 
         if cur.rowcount > 0:
             return True
@@ -317,7 +317,7 @@ class ClanBattle():
 
     def finish_carry_over(self, user_id):
         cur = self.conn.cursor()
-        cur.execute("UPDATE carry_over SET is_attack = 1 WHERE member_id = %s AND is_attack = 0", (user_id,))
+        cur.execute("UPDATE carry_over SET is_attack = 1 WHERE discord_user_id = %s AND is_attack = 0", (user_id,))
         self.conn.commit()
 
 
@@ -339,7 +339,7 @@ class ClanBattle():
             is_round = True
 
         cur = self.conn.cursor()
-        cur.execute("SELECT boss_id, max_hit_point FROM boss WHERE boss_id = %s", (cb_dict['boss_id'],))
+        cur.execute("SELECT id, max_hit_point FROM boss WHERE id = %s", (cb_dict['boss_id'],))
 
         boss_number, max_hit_point = cur.fetchone()
 
@@ -378,7 +378,7 @@ class ClanBattle():
         print ('持ち越し入れます')
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO carry_over (carried_at, member_id, boss_id, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
+        cur.execute("INSERT INTO carry_over (carried_at, discord_user_id, id, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
 
         self.conn.commit()
 
@@ -387,23 +387,23 @@ class ClanBattle():
         cur = self.conn.cursor()
         cur.execute(" \
             SELECT \
-                cm.member_id, \
+                cm.discord_user_id, \
                 cm.member_name, \
                 IFNULL(ac.attack_count, 0) AS attack_count \
             FROM \
-                clan_members cm \
+                clan_member cm \
             LEFT JOIN( \
                 SELECT \
-                    member_id, \
+                    discord_user_id, \
                     SUM(attack_weight) attack_count \
                 FROM \
                     attack_log \
                 WHERE \
                     attack_time BETWEEN %s AND %s \
                 GROUP BY \
-                    member_id \
+                    discord_user_id \
             ) ac \
-            ON cm.member_id = ac.member_id \
+            ON cm.discord_user_id = ac.discord_user_id \
             WHERE \
                 cm.is_member = 1 \
         ", (f, t))
@@ -420,23 +420,23 @@ class ClanBattle():
         cur = self.conn.cursor()
         cur.execute(" \
             SELECT \
-                cm.member_id, \
+                cm.discord_user_id, \
                 cm.member_name, \
                 IFNULL(ac.attack_count, 0) AS attack_count \
             FROM \
-                clan_members cm \
+                clan_member cm \
             LEFT JOIN( \
                 SELECT \
-                    member_id, \
+                    discord_user_id, \
                     SUM(attack_weight) attack_count \
                 FROM \
                     attack_log \
                 WHERE \
                     attack_time BETWEEN %s AND %s \
                 GROUP BY \
-                    member_id \
+                    discord_user_id \
             ) ac \
-            ON cm.member_id = ac.member_id \
+            ON cm.discord_user_id = ac.discord_user_id \
             WHERE \
                 cm.is_member = 1 \
         ", (f, t))
@@ -479,7 +479,7 @@ class ClanBattle():
 
     def get_damage_memo(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT dm.id, dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_members cm ON dm.member_id = cm.member_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo GROUP BY message_id, member_id)")
+        cur.execute("SELECT dm.id, dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_member cm ON dm.discord_user_id = cm.discord_user_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo GROUP BY message_id, discord_user_id)")
 
         l = []
         rows = cur.fetchall()
@@ -490,7 +490,7 @@ class ClanBattle():
 
 #        if cur.rowcount > 0:
 #            r = cur.fetchone()
-#            d = {'message_id': r[0], 'damage': r[1], 'member_id': r[2]}
+#            d = {'message_id': r[0], 'damage': r[1], 'discord_user_id': r[2]}
 #            return d
 #        else:
 #            return None
@@ -506,22 +506,22 @@ class ClanBattle():
 
     def is_damage_memo_empty(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT message_id, damage, member_id FROM damage_memo")
+        cur.execute("SELECT message_id, damage, discord_user_id FROM damage_memo")
         return True if cur.rowcount == 0 else False
 
     def insert_damage_memo(self, message_id, user_id=None, damage=0):
         said_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO damage_memo (message_id, member_id, damage, said_time) VALUES (%s, %s, %s, %s)", (message_id, user_id, damage, said_time))
+        cur.execute("INSERT INTO damage_memo (message_id, discord_user_id, damage, said_time) VALUES (%s, %s, %s, %s)", (message_id, user_id, damage, said_time))
         self.conn.commit()
 
     def truncate_damage_memo(self):
         cur = self.conn.cursor()
         cur.execute("TRUNCATE TABLE damage_memo")
 
-    def delete_damage_memo(self, member_id):
+    def delete_damage_memo(self, discord_user_id):
         cur = self.conn.cursor()
-        cur.execute("DELETE FROM damage_memo WHERE member_id = %s", (member_id,))
+        cur.execute("DELETE FROM damage_memo WHERE discord_user_id = %s", (discord_user_id,))
         self.conn.commit()
 
     def get_member_id_from_damege_memo_id(self, damage_memo_id):
@@ -536,12 +536,12 @@ class ClanBattle():
         cur = self.conn.cursor()
         print ('ボスのマスタを更新')
         for boss_num in self.BOSSHP_MASTER[level_key]:
-            cur.execute("UPDATE boss SET max_hit_point = %s WHERE boss_id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
+            cur.execute("UPDATE boss SET max_hit_point = %s WHERE id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
             self.conn.commit()
 
         # NOTE: current_bossはマスタが更新される前に更新されてしまっているため、このタイミングでマスタのHPをあわせる
         print ('current_bossの内容を更新')
-        cur.execute("UPDATE current_boss SET hit_point = %s WHERE boss_id = 1", (self.BOSSHP_MASTER[level_key][1] * 10000,))
+        cur.execute("UPDATE current_boss SET hit_point = %s WHERE id = 1", (self.BOSSHP_MASTER[level_key][1] * 10000,))
         self.conn.commit()
         
 
