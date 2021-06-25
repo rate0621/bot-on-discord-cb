@@ -122,7 +122,7 @@ class Actions:
                         call_message = cb_dict['boss_name'] + Pri.JIKAN_YO + "\n"
                         if not user_list == []:
                             for u in user_list:
-                                call_message += req.guild.get_member(int(u['member_id'])).mention + "\n"
+                                call_message += req.guild.get_member(int(u['discord_user_id'])).mention + "\n"
 
                         suf_message = call_message
                     else:
@@ -315,8 +315,8 @@ class Actions:
                 call_message = cb_dict['boss_name'] + Pri.JIKAN_YO + "\n"
                 if not user_list == []:
                     for u in user_list:
-                        print (req.guild.get_member(int(u['member_id'])))
-                        call_message += req.guild.get_member(int(u['member_id'])).mention
+                        print (req.guild.get_member(int(u['discord_user_id'])))
+                        call_message += req.guild.get_member(int(u['discord_user_id'])).mention
 
                 boss_level = cb.get_boss_level(cb_dict['loop_count'])
                 cb.update_boss_hp(boss_level)
