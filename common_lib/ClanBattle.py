@@ -378,7 +378,7 @@ class ClanBattle():
         print ('持ち越し入れます')
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO carry_over (carried_at, discord_user_id, id, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
+        cur.execute("INSERT INTO carry_over (carried_at, discord_user_id, boss_id, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
 
         self.conn.commit()
 
