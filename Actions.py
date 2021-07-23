@@ -1,4 +1,4 @@
-import os, re
+import sys, os, re
 import random
 from datetime import datetime, timedelta, timezone
 import discord
@@ -80,16 +80,20 @@ class Actions:
         # クラバト関連のアクションはここ
         CLANBATTLE_CHANNEL = os.getenv("CLANBATTLE_CHANNEL", "")
         if str(req.channel.id) == CLANBATTLE_CHANNEL:
-            if re.search("^凸$", req.content):
+            if re.search("^凸\s+\d+$", req.content):
+                m = re.search("^凸\s+(\d+)$", req.content)
+                boss_num = m.group(1)
+                boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
                 if cb.attack_check(str(req.author.id)):
                     self.res = Pri.SENGEN_ZUMI
                 else:
-                    cb_dict = cb.get_current_boss()
-                    self.res = req.author.name + 'が' + cb_dict['boss_name'] + Pri.TOTU_SURUWA
+                    bs_dict = cb.get_boss_status()
+                    self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
 
-                    cb.attack(req.author.id)
+                    cb.attack(req.author.id, boss_num)
 
                 return self.res_type, self.res
 
@@ -101,41 +105,44 @@ class Actions:
                     
                     damage = m.group(1)
                     damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+                    boss_num = cb.get_attacked_boss_num(req.author.id)
 
                     # ボスが撃破される前に情報を取得
                     cb_dict = cb.get_current_boss()
 
                     # 凸予約していた場合、凸したフラグを立てる
-                    if cb.reserved_check(str(req.author.id), cb_dict['boss_id']):
-                        cb.reserved_clear(str(req.author.id), cb_dict['boss_id'])
+                    if cb.reserved_check(str(req.author.id), boss_num):
+                        cb.reserved_clear(str(req.author.id), boss_num)
 
-                    # 持ち越しで叩いた場合、フラグをたてる
-                    if cb.check_carry_over(str(req.author.id)):
-                        cb.finish_carry_over(str(req.author.id))
+#                    # 持ち越しで叩いた場合、フラグをたてる
+#                    if cb.check_carry_over(str(req.author.id)):
+#                        cb.finish_carry_over(str(req.author.id))
 
-                    is_defeat, is_around = cb.update_current_boss(int(damage))
-                    cb_dict = cb.get_current_boss()
+                    is_defeat = cb.update_boss_status(int(damage), boss_num)
+                    bs_dict = cb.get_boss_status()
 
                     suf_message = ''
                     if is_defeat:
-                        user_list = cb.get_reserved_users(cb_dict['boss_id'])
-                        call_message = cb_dict['boss_name'] + Pri.JIKAN_YO + "\n"
+                        cb.insert_carry_over(str(req.author.id), boss_num, 0)
+
+                        user_list = cb.get_reserved_users(boss_num)
+                        call_message = bs_dict[int(boss_num)]['boss_name'] + Pri.JIKAN_YO + "\n"
                         if not user_list == []:
                             for u in user_list:
                                 call_message += req.guild.get_member(int(u['discord_user_id'])).mention + "\n"
 
                         suf_message = call_message
                     else:
-                        suf_message = cb_dict['boss_name'] + '残り' + str(cb_dict['hit_point']) + Pri.NOKORI_YO
+                        suf_message = bs_dict[int(boss_num)]['boss_name'] + '残り' + str(bs_dict[int(boss_num)]['hit_point']) + Pri.NOKORI_YO
 
                     cb.finish_attack(str(req.author.id), int(damage), is_defeat)
 
-                    if is_around:
-                        around_count = cb.get_around_count()
-                        suf_message += 'ちなみにこの' + str(cb_dict['loop_count'] - 1) + '週目の討伐にかかった凸数は、' + str(around_count) + Pri.TOTSUSUU_YO
-
-                        boss_level = cb.get_boss_level(cb_dict['loop_count'])
-                        cb.update_boss_hp(boss_level)
+#                    if is_around:
+#                        around_count = cb.get_around_count()
+#                        suf_message += 'ちなみにこの' + str(cb_dict['loop_count'] - 1) + '週目の討伐にかかった凸数は、' + str(around_count) + Pri.TOTSUSUU_YO
+#
+#                        boss_level = cb.get_boss_level(cb_dict['loop_count'])
+#                        cb.update_boss_hp(boss_level)
 
 
                     self.res = Pri.OTSUKARE_SAMA + "\n" + suf_message
@@ -145,14 +152,20 @@ class Actions:
 
                 return self.res_type, self.res
 
-            if re.search("^予約\s+\d+$", req.content):
+            if re.search("^予約\s+\d+", req.content):
                 cb = ClanBattle.ClanBattle()
-                m = re.search("^予約\s+(\d+)$", req.content)
-                
-                boss_number = m.group(1)
+                m = re.search("^予約\s+(\d+)\s(.*)$", req.content)
+                option = None
+                if m is None:
+                    m = re.search("^予約\s+(\d+)$", req.content)
+                    boss_number = m.group(1)
+                else:
+                    boss_number = m.group(1)
+                    option = m.group(2)
+
                 # 半角に置換
                 boss_number = boss_number.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
-                cb.boss_reserve(str(req.author.id), int(boss_number))
+                cb.boss_reserve(str(req.author.id), int(boss_number), option)
 
                 self.res_type = 'text'
                 self.res      = Pri.YOYAKU_KANRYOU
@@ -185,31 +198,38 @@ class Actions:
                 co_users = cb.get_carry_over_users()
                 b_array     = cb.get_bosses()
                 user_dict   = cb.get_all_reserved_users()
-                cb_dict     = cb.get_current_boss()
+                bs_dict     = cb.get_boss_status()
+
+                # bs_dictの中から、最小のlevelを取り出す
+                min_level = min([int(i["loop_count"]) for i in bs_dict.values()])
 
                 message = Pri.YOYAKU_JOUKYOU + "\n```\n"
-                if cb_dict['loop_count'] <= 3:
-                    message += "現在:1段階目 " + str(cb_dict['loop_count']) + "週目" + "(2段階目は4〜10)\n"
-                elif cb_dict['loop_count'] <= 10:
-                    message += "現在:2段階目 " + str(cb_dict['loop_count']) + "週目" + "(3段階目は11〜30)\n"
-                elif cb_dict['loop_count'] <= 31:
-                    message += "現在:3段階目 " + str(cb_dict['loop_count']) + "週目" + "(4段階目は31〜40)\n"
-                elif cb_dict['loop_count'] <= 41:
-                    message += "現在:4段階目 " + str(cb_dict['loop_count']) + "週目" + "(5段階目は41〜)\n"
+                if min_level <= 3:
+                    message += "現在:" + str(min_level) + "段階目 " + "(2段階目は4〜10)\n"
+                elif min_level <= 10:
+                    message += "現在:" + str(min_level) + "段階目 " + "(3段階目は11〜30)\n"
+                elif min_level <= 31:
+                    message += "現在:" + str(min_level) + "段階目 " + "(4段階目は31〜40)\n"
+                elif min_level <= 41:
+                    message += "現在:" + str(min_level) + "段階目 " + "(5段階目は41〜)\n"
                 else:
                     message += "\n"
 
-                for k, b in zip(user_dict, b_array):
-                    if k == cb_dict['boss_id']:
-                        message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
-                    else:
-                        message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")\n"
+                for k, b, bs in zip(user_dict, b_array, bs_dict):
+#                    if k == cb_dict['boss_id']:
+#                        message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")" + " ←イマココ(残り、" + str(cb_dict['hit_point']) + ") \n"
+#                    else:
+#                        message += "【" + str(k) + "】(目標凸数:" + str(b['target']) + ")\n"
+                    message += "【" + str(k) + "-" + str(bs_dict[bs]['loop_count']) + "】(残りHP:" + str(bs_dict[bs]['hit_point']) + ")\n"
 
-                    for i, u in enumerate(user_dict[k]):
-                        if (u in co_users):
-                            message += "    " + u + "  (持ち越し:" + str(co_users[u]['time']) + "秒)" + "\n"
+                    for u in user_dict[k]:
+#                        if (u['member_name'] in co_users):
+#                            message += "    " + u['member_name'] + "  (持ち越し:" + str(co_users[u['member_name']]['time']) + "秒)" + "\n"
+#                        else:
+                        if u['option'] == '':
+                            message += "    " + u['member_name'] + "\n"
                         else:
-                            message += "    " + u + "\n"
+                            message += "    " + u['member_name'] +  "(" + u['option'] + ")" + "\n"
 
                 message += "残り凸数は、" + str(cb.get_remaining_atc_count()) + Pri.NOKORI_YO + "\n"
                 message += "```"
@@ -250,11 +270,7 @@ class Actions:
                 time = time.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
 
                 cb_dict = cb.get_current_boss()
-                last_boss_number = cb_dict['boss_id'] - 1
-                if last_boss_number == 0:
-                    last_boss_number = 5
-
-                cb.insert_carry_over(str(req.author.id), last_boss_number, int(time))
+                cb.update_carry_over(str(req.author.id), last_boss_number, int(time))
 
                 self.res_type = 'text'
                 self.res      = Pri.MOCHIKOSHI_HAAKU

@@ -105,7 +105,7 @@ class ClanBattle():
         return boss_list
 
 
-    def boss_reserve(self, user_id, boss_num):
+    def boss_reserve(self, user_id, boss_num, option=None):
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
         if self.reserved_check(user_id, boss_num):
@@ -115,6 +115,9 @@ class ClanBattle():
 
             cur = self.conn.cursor()
             cur.execute("INSERT INTO boss_reserve (reserved_at, discord_user_id, boss_id, is_attack, is_cancel) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, 0))
+
+            if not option is None:
+                cur.execute("INSERT INTO boss_reserve_option (boss_reserve_id, option_text) VALUES (%s, %s)", (cur.lastrowid, option))
 
             self.conn.commit()
             print ('予約完了')
@@ -158,12 +161,15 @@ class ClanBattle():
 
     def get_reserved_users(self, boss_num):
         cur = self.conn.cursor()
-        cur.execute("SELECT br.discord_user_id, cm.member_name FROM boss_reserve br INNER JOIN clan_member cm ON br.discord_user_id = cm.discord_user_id WHERE boss_id = %s AND is_attack = 0 AND is_cancel = 0", (boss_num,))
+        cur.execute("SELECT br.discord_user_id, cm.member_name, bro.option_text FROM boss_reserve br INNER JOIN clan_member cm ON br.discord_user_id = cm.discord_user_id  LEFT JOIN boss_reserve_option bro ON br.id = bro.boss_reserve_id WHERE boss_id = %s AND is_attack = 0 AND is_cancel = 0", (boss_num,))
 
         l = []
         rows = cur.fetchall()
         for row in rows:
-            l.append({'discord_user_id': row[0], 'member_name': row[1]})
+            if row[2] is None:
+                l.append({'discord_user_id': row[0], 'member_name': row[1], 'option': ''})
+            else:
+                l.append({'discord_user_id': row[0], 'member_name': row[1], 'option': row[2]})
 
         return l
 
@@ -175,7 +181,9 @@ class ClanBattle():
         for boss in boss_array:
             dic.setdefault(boss['id'], [])
             for u in self.get_reserved_users(boss['id']):
-                dic.setdefault(boss['id'], []).append(u['member_name'])
+                #dic.setdefault(boss['id'], []).append(u['member_name'])
+                #dic.setdefault(boss['id'], {'member_name': u['member_name'], 'option': u['option']})
+                dic[boss['id']].append({'member_name': u['member_name'], 'option': u['option']})
 
         return dic
 
@@ -188,28 +196,42 @@ class ClanBattle():
         d = {'boss_id': r[0], 'boss_name': r[1], 'hit_point': r[2], 'loop_count': r[3]}
         return d
 
-    def attack(self, user_id):
+    def get_boss_status(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT bs.boss_id, b.boss_name, bs.hit_point, bs.loop_count FROM boss_status bs INNER JOIN boss b ON bs.boss_id = b.id")
+
+        rows = cur.fetchall()
+
+        dic = {}
+        for row in rows:
+            level = 1
+            if row[3] <= 3:
+                level = 1
+            elif row[3] <= 10:
+                level = 2
+            elif row[3] <= 31:
+                level = 3
+            elif row[3] <= 41:
+                level = 4
+            else:
+                level = 5
+                
+            dic.setdefault(row[0], {'boss_name': row[1], 'hit_point': row[2], 'loop_count': row[3], 'level': level})
+
+        max_level = max([int(i["loop_count"]) for i in dic.values()])
+        return dic
+
+    def attack(self, user_id, boss_num):
         '''
-        凸の宣言
+        素凸の宣言
         '''
         attack_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
-        cb_dict = self.get_current_boss()
-
-        f, t = self.get_today_from_and_to()
+        #cb_dict = self.get_current_boss()
+        bs_dict = self.get_boss_status()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT is_carry_over FROM attack_log WHERE discord_user_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
-        is_carry_over = cur.fetchone()
-
-        if is_carry_over is None or is_carry_over[0] == 0:
-            weight = 1
-        else:
-            weight = 0.5
-
-
-        #cur = self.conn.cursor()
-        cur.execute("INSERT INTO attack_log (attack_time, discord_user_id, boss_id, damage, score, is_carry_over, loop_count, attack_weight) VALUES (%s, %s, %s, 0, 0, 0, %s, %s)", (attack_time, user_id, cb_dict['boss_id'], cb_dict['loop_count'], weight))
+        cur.execute("INSERT INTO attack_log (attack_time, discord_user_id, boss_id, damage, score, is_carry_over, loop_count, attack_weight) VALUES (%s, %s, %s, 0, 0, 0, %s, %s)", (attack_time, user_id, boss_num, bs_dict[int(boss_num)]['loop_count'], 1))
 
         self.conn.commit()
 
@@ -229,6 +251,13 @@ class ClanBattle():
         cur.execute("DELETE FROM attack_log WHERE discord_user_id = %s AND damage = 0", (user_id,))
         self.conn.commit()
 
+    def get_attacked_boss_num(self, user_id):
+        f, t = self.get_today_from_and_to()
+        cur = self.conn.cursor()
+        cur.execute("SELECT boss_id FROM attack_log WHERE discord_user_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+        boss_num = cur.fetchone()[0]
+        return boss_num
+        
 
     def finish_attack(self, user_id, damage, is_carry_over):
         '''
@@ -238,11 +267,11 @@ class ClanBattle():
         f, t = self.get_today_from_and_to()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT attack_weight FROM attack_log WHERE discord_user_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
-        attack_weight = cur.fetchone()
-
-        if attack_weight[0] == 0.5:
-            is_carry_over = 0
+#        cur.execute("SELECT attack_weight FROM attack_log WHERE discord_user_id = %s AND attack_time BETWEEN %s AND %s ORDER BY attack_time DESC LIMIT 1", (user_id, f, t))
+#        attack_weight = cur.fetchone()
+#
+#        if attack_weight[0] == 0.5:
+#            is_carry_over = 0
 
         if is_carry_over:
             cur.execute("UPDATE attack_log SET damage = %s, is_carry_over = %s, attack_weight = 0.5 WHERE discord_user_id = %s AND damage = 0", (damage, is_carry_over, user_id))
@@ -272,9 +301,25 @@ class ClanBattle():
         else:
             cur.execute("UPDATE current_boss SET hit_point = hit_point - %s", (damage,))
             self.conn.commit()
-            
 
         return is_carry_over, is_round
+
+    def update_boss_status(self, damage, boss_num):
+        is_carry_over = 0
+        is_round      = False
+        bs_dict = self.get_boss_status()
+        cur = self.conn.cursor()
+        
+        # ボスのHPが０かマイナスになったかチェック。やり方については以下を参考
+        # https://teratail.com/questions/151694
+        if ((bs_dict[int(boss_num)]['hit_point'] - damage > 0) - (bs_dict[int(boss_num)]['hit_point'] - damage < 0)) <= 0:
+            self.increment_boss_loop_count(boss_num)
+            is_carry_over = 1
+        else:
+            cur.execute("UPDATE boss_status SET hit_point = hit_point - %s WHERE boss_id = %s", (damage, boss_num))
+            self.conn.commit()
+
+        return is_carry_over
 
 
     def get_attack_count(self):
@@ -347,6 +392,17 @@ class ClanBattle():
         self.conn.commit()
 
         return is_round
+
+    def increment_boss_loop_count(self, boss_num):
+        bs_dict = self.get_boss_status()
+        bs_dict[int(boss_num)]['loop_count'] += 1
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT id, max_hit_point FROM boss WHERE id = %s", (boss_num,))
+        boss_number, max_hit_point = cur.fetchone()
+        
+        cur.execute("UPDATE boss_status SET hit_point = %s, loop_count = %s WHERE boss_id = %s", (max_hit_point, bs_dict[int(boss_num)]['loop_count'], boss_num))
+        self.conn.commit()
         
 
     def get_around_count(self):
@@ -379,6 +435,14 @@ class ClanBattle():
         _datetime = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cur = self.conn.cursor()
         cur.execute("INSERT INTO carry_over (carried_at, discord_user_id, boss_id, time, is_attack) VALUES (%s, %s, %s, %s, 0)", (_datetime, user_id, boss_num, time))
+
+        self.conn.commit()
+
+    def update_carry_over(self, user_id, time):
+        print ('持ち越し時間更新します')
+        f, t = self.get_today_from_and_to()
+        cur = self.conn.cursor()
+        cur.execute("UPDATE carry_over SET time = %s WHERE carried_at BETWEEN %s AND %s AND discord_user_id = %s AND time = 0", (time, f, t, user_id))
 
         self.conn.commit()
 
@@ -571,6 +635,10 @@ if __name__ == '__main__':
 
 #    print (cb.get_bosses())
 
+### 予約確認 ###
+    cb.get_boss_status()
+###
+
 
 ### メンバー全員の凸数確認 ###
 #    member_attack_dic    = cb.get_today_members_attack_count()
@@ -599,12 +667,12 @@ if __name__ == '__main__':
 #    print (cb.get_current_boss())
 
 ### 単純な1凸 ###
-    if not cb.attack_check(user_id):
-        cb.attack(user_id)
-    #cb.attack_cancel(user_id)
-
-    is_carry_over, is_round = cb.update_current_boss(damage)
-    cb.finish_attack(user_id, damage, is_carry_over)
+#    if not cb.attack_check(user_id):
+#        cb.attack(user_id)
+#    #cb.attack_cancel(user_id)
+#
+#    is_carry_over, is_round = cb.update_current_boss(damage)
+#    cb.finish_attack(user_id, damage, is_carry_over)
 #    if is_round:
 #        around_count = cb.get_around_count()
 #        print ('一周にかかった凸数は、' + str(around_count) + 'です。')
