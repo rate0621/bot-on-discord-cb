@@ -1,5 +1,4 @@
 import os, sys
-            iis_carry_over = 0
 import sqlite3
 #import pandas as pd
 import numpy as np
