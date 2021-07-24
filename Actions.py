@@ -11,17 +11,14 @@ CLANBATTLE_HELP = '''
 ```
 パウロスでもわかる機能説明
 
-### 凸宣言　「凸」
+### 凸宣言　「凸 1」
+    ボスに凸する前に必ず宣言する。
+
+### 持ち越しでの凸宣言 「持ち越し凸 1」
     ボスに凸する前に必ず宣言する。
 
 ### 凸完了報告　「凸完了　114514」（与えたダメージ）
     ボスに与えたダメージを記載する。
-    事前に凸予約していた場合、完了報告することで自動でキャンセルされる。
-    数字は全角でも半角でもOK。
-
-### 持ち越し宣言　「持ち越し　70」
-    ボスを〆たら持ち越し時間を教えてあげてください。
-    その状態でボスを予約すると、予約確認時に持ち越し秒数が表示されて幸せになれます。
 
 ### 凸キャンセル　「凸キャンセル」
     凸宣言をキャンセルする。
@@ -29,8 +26,7 @@ CLANBATTLE_HELP = '''
 ### 予約　「予約　1」(予約したいボスの番号１〜５)
     予約したいボスがいるならこれで。
     予約しておけば、そのボスが回ってきたときにbotがメンションを飛ばしてくれます。
-
-    多分何件でも予約できるけど良識の範囲内で。
+    また、「予約 1 持ち越しで900万ダメージ予定」みたいな形でメモを残すことも可能です。
 
 ### 予約キャンセル　「予約キャンセル」
     予約したあとにやっぱりキャンセルしたくなったらこれで。
@@ -39,6 +35,9 @@ CLANBATTLE_HELP = '''
 ### 予約確認 「予約確認」
     誰々が予約しているかが表示される。
     ついでに各ボスの目標凸数も表示される。
+
+### 持ち越し確認 「持ち越し確認」
+    現時点で誰が何個持ち越しを抱えているかの一覧が表示されます。
 
 ### 凸数確認　「凸数確認」
     その日の凸数が表示される。
@@ -94,6 +93,24 @@ class Actions:
                     self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
 
                     cb.attack(req.author.id, boss_num)
+
+                return self.res_type, self.res
+
+            if re.search("^持ち越し凸\s+\d+$", req.content):
+                m = re.search("^持ち越し凸\s+(\d+)$", req.content)
+                boss_num = m.group(1)
+                boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
+                cb = ClanBattle.ClanBattle()
+                self.res_type = 'text'
+                if cb.attack_check(str(req.author.id)):
+                    self.res = Pri.SENGEN_ZUMI
+                else:
+                    bs_dict = cb.get_boss_status()
+                    self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
+
+                    is_carry_over = True
+                    cb.attack(req.author.id, boss_num, is_carry_over)
 
                 return self.res_type, self.res
 
@@ -276,7 +293,17 @@ class Actions:
                 self.res      = Pri.MOCHIKOSHI_HAAKU
 
                 return self.res_type, self.res
+
+            if re.search("^持ち越し確認$", req.content):
+                cb = ClanBattle.ClanBattle()
+                co_users = cb.get_carry_over_users()
+                message = ''
+                for user in co_users:
+                    message += user + ":" + str(len(co_users[user])) + "\n"
                     
+                self.res_type = 'text'
+                self.res      = message
+
             if re.search("^完凸チェック$", req.content):
                 cb = ClanBattle.ClanBattle()
                 member_attack_dic = cb.get_today_members_attack_count()
