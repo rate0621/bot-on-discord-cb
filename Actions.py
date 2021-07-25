@@ -140,6 +140,7 @@ class Actions:
 
                     suf_message = ''
                     if is_defeat:
+                        cb.update_boss_hp(boss_num)
                         cb.insert_carry_over(str(req.author.id), boss_num, 0)
 
                         user_list = cb.get_reserved_users(boss_num)
@@ -218,17 +219,18 @@ class Actions:
                 bs_dict     = cb.get_boss_status()
 
                 # bs_dictの中から、最小のlevelを取り出す
-                min_level = min([int(i["loop_count"]) for i in bs_dict.values()])
+                min_loop_count = min([int(i["loop_count"]) for i in bs_dict.values()])
+                level = cb.get_boss_level(min_loop_count)
 
                 message = Pri.YOYAKU_JOUKYOU + "\n```\n"
-                if min_level <= 3:
-                    message += "現在:" + str(min_level) + "段階目 " + "(2段階目は4〜10)\n"
-                elif min_level <= 10:
-                    message += "現在:" + str(min_level) + "段階目 " + "(3段階目は11〜30)\n"
-                elif min_level <= 31:
-                    message += "現在:" + str(min_level) + "段階目 " + "(4段階目は31〜40)\n"
-                elif min_level <= 41:
-                    message += "現在:" + str(min_level) + "段階目 " + "(5段階目は41〜)\n"
+                if min_loop_count <= 3:
+                    message += "現在:" + str(level) + "段階目 " + "(2段階目は4〜10)\n"
+                elif min_loop_count <= 10:
+                    message += "現在:" + str(level) + "段階目 " + "(3段階目は11〜30)\n"
+                elif min_loop_count <= 31:
+                    message += "現在:" + str(level) + "段階目 " + "(4段階目は31〜40)\n"
+                elif min_loop_count <= 41:
+                    message += "現在:" + str(level) + "段階目 " + "(5段階目は41〜)\n"
                 else:
                     message += "\n"
 
@@ -349,20 +351,22 @@ class Actions:
                 self.res_type = 'text'
                 self.res      = message
 
-            if re.search("^強制退場$", req.content):
+            if re.search("^強制退場\s\d$", req.content):
                 cb = ClanBattle.ClanBattle()
-                cb.lotate_boss()
-                cb_dict = cb.get_current_boss()
+                m = re.search("^強制退場\s+(\d+)$", req.content)
+                boss_num = m.group(1)
+                cb.increment_boss_loop_count(boss_num)
+                bs_dict = cb.get_boss_status()
 
-                user_list = cb.get_reserved_users(cb_dict['boss_id'])
-                call_message = cb_dict['boss_name'] + Pri.JIKAN_YO + "\n"
+                user_list = cb.get_reserved_users(boss_num)
+                call_message = bs_dict[int(boss_num)]['boss_name'] + Pri.JIKAN_YO + "\n"
                 if not user_list == []:
                     for u in user_list:
-                        print (req.guild.get_member(int(u['discord_user_id'])))
-                        call_message += req.guild.get_member(int(u['discord_user_id'])).mention
+                        call_message += req.guild.get_member(int(u['discord_user_id'])).mention + "\n"
 
-                boss_level = cb.get_boss_level(cb_dict['loop_count'])
-                cb.update_boss_hp(boss_level)
+
+#                boss_level = cb.get_boss_level(cb_dict['loop_count'])
+#                cb.update_boss_hp(boss_level)
 
                 self.res_type = 'text'
                 self.res      = call_message

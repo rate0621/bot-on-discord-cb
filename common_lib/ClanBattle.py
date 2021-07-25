@@ -287,27 +287,27 @@ class ClanBattle():
 
 
 
-    def update_current_boss(self, damage):
-        '''
-        current_bossの情報を更新する。
-        もし、撃破した場合は、その返り値を返す。
-        また、5ボスを討伐（一周）したか否かのフラグも返す。
-        '''
-        is_carry_over = 0
-        is_round      = False
-        cb_dict = self.get_current_boss()
-        cur = self.conn.cursor()
-
-        # ボスのHPが０かマイナスになったかチェック。やり方については以下を参考
-        # https://teratail.com/questions/151694
-        if ((cb_dict['hit_point'] - damage > 0) - (cb_dict['hit_point'] - damage < 0)) <= 0:
-            is_round      = self.lotate_boss()
-            is_carry_over = 1
-        else:
-            cur.execute("UPDATE current_boss SET hit_point = hit_point - %s", (damage,))
-            self.conn.commit()
-
-        return is_carry_over, is_round
+#    def update_current_boss(self, damage):
+#        '''
+#        current_bossの情報を更新する。
+#        もし、撃破した場合は、その返り値を返す。
+#        また、5ボスを討伐（一周）したか否かのフラグも返す。
+#        '''
+#        is_carry_over = 0
+#        is_round      = False
+#        cb_dict = self.get_current_boss()
+#        cur = self.conn.cursor()
+#
+#        # ボスのHPが０かマイナスになったかチェック。やり方については以下を参考
+#        # https://teratail.com/questions/151694
+#        if ((cb_dict['hit_point'] - damage > 0) - (cb_dict['hit_point'] - damage < 0)) <= 0:
+#            is_round      = self.lotate_boss()
+#            is_carry_over = 1
+#        else:
+#            cur.execute("UPDATE current_boss SET hit_point = hit_point - %s", (damage,))
+#            self.conn.commit()
+#
+#        return is_carry_over, is_round
 
     def update_boss_status(self, damage, boss_num):
         is_carry_over = 0
@@ -380,36 +380,41 @@ class ClanBattle():
         return 90 - attack_count
 
 
-    def lotate_boss(self):
-        cb_dict = self.get_current_boss()
-
-        cb_dict['boss_id'] += 1
-
-        is_round = False
-        if cb_dict['boss_id'] > 5:
-            cb_dict['boss_id']     = 1
-            cb_dict['loop_count'] += 1
-            is_round = True
-
+    def lotate_boss(self, boss_num):
+#        cb_dict = self.get_current_boss()
+#
+#        cb_dict['boss_id'] += 1
+#
+#        is_round = False
+#        if cb_dict['boss_id'] > 5:
+#            cb_dict['boss_id']     = 1
+#            cb_dict['loop_count'] += 1
+#            is_round = True
+#
         cur = self.conn.cursor()
-        cur.execute("SELECT id, max_hit_point FROM boss WHERE id = %s", (cb_dict['boss_id'],))
+#        cur.execute("SELECT id, max_hit_point FROM boss WHERE id = %s", (cb_dict['boss_id'],))
+#
+#        boss_number, max_hit_point = cur.fetchone()
 
-        boss_number, max_hit_point = cur.fetchone()
-
-        cur.execute("UPDATE current_boss SET boss_id = %s, hit_point = %s, loop_count = %s", (boss_number, max_hit_point, cb_dict['loop_count']))
+        cur.execute("UPDATE boss_status SET loop_count = loop_count + 1 WHERE boss_id = %s", (boss_num,))
         self.conn.commit()
 
-        return is_round
+#        return is_round
 
     def increment_boss_loop_count(self, boss_num):
+        boss_num = int(boss_num)
         bs_dict = self.get_boss_status()
-        bs_dict[int(boss_num)]['loop_count'] += 1
+        level   = self.get_boss_level(bs_dict[boss_num]['loop_count'])
+        level_key = 'LEVEL' + str(level)
+        self.BOSSHP_MASTER[level_key][boss_num]
+
+        #bs_dict[int(boss_num)]['loop_count'] += 1
 
         cur = self.conn.cursor()
-        cur.execute("SELECT id, max_hit_point FROM boss WHERE id = %s", (boss_num,))
-        boss_number, max_hit_point = cur.fetchone()
+#        cur.execute("SELECT id, max_hit_point FROM boss WHERE id = %s", (boss_num,))
+#        boss_number, max_hit_point = cur.fetchone()
         
-        cur.execute("UPDATE boss_status SET hit_point = %s, loop_count = %s WHERE boss_id = %s", (max_hit_point, bs_dict[int(boss_num)]['loop_count'], boss_num))
+        cur.execute("UPDATE boss_status SET hit_point = %s, loop_count = loop_count + 1 WHERE boss_id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
         self.conn.commit()
         
 
@@ -602,19 +607,38 @@ class ClanBattle():
         r = cur.fetchone()
         return r[0] if r is not None else 0
 
-    def update_boss_hp(self, level):
+#    def update_boss_hp(self, level):
+#        level_key = 'LEVEL' + str(level)
+#
+#        cur = self.conn.cursor()
+#        print ('ボスのマスタを更新')
+#        for boss_num in self.BOSSHP_MASTER[level_key]:
+#            cur.execute("UPDATE boss SET max_hit_point = %s WHERE id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
+#            self.conn.commit()
+#
+#        # NOTE: current_bossはマスタが更新される前に更新されてしまっているため、このタイミングでマスタのHPをあわせる
+#        print ('current_bossの内容を更新')
+#        cur.execute("UPDATE current_boss SET hit_point = %s WHERE id = 1", (self.BOSSHP_MASTER[level_key][1] * 10000,))
+#        self.conn.commit()
+        
+    def update_boss_hp(self, boss_num):
+        bs_dict = self.get_boss_status()
+        level   = self.get_boss_level(bs_dict[boss_num]['loop_count'])
         level_key = 'LEVEL' + str(level)
 
+        print ('boss_statusを更新')
         cur = self.conn.cursor()
-        print ('ボスのマスタを更新')
-        for boss_num in self.BOSSHP_MASTER[level_key]:
-            cur.execute("UPDATE boss SET max_hit_point = %s WHERE id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
-            self.conn.commit()
-
-        # NOTE: current_bossはマスタが更新される前に更新されてしまっているため、このタイミングでマスタのHPをあわせる
-        print ('current_bossの内容を更新')
-        cur.execute("UPDATE current_boss SET hit_point = %s WHERE id = 1", (self.BOSSHP_MASTER[level_key][1] * 10000,))
+        cur.execute("UPDATE boss_status SET hit_point = %s WHERE boss_id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
         self.conn.commit()
+
+#        for boss_num in self.BOSSHP_MASTER[level_key]:
+#            cur.execute("UPDATE boss SET max_hit_point = %s WHERE id = %s", (self.BOSSHP_MASTER[level_key][boss_num] * 10000, boss_num))
+#            self.conn.commit()
+#
+#        # NOTE: current_bossはマスタが更新される前に更新されてしまっているため、このタイミングでマスタのHPをあわせる
+#        print ('current_bossの内容を更新')
+#        cur.execute("UPDATE current_boss SET hit_point = %s WHERE id = 1", (self.BOSSHP_MASTER[level_key][1] * 10000,))
+#        self.conn.commit()
         
 
     def get_boss_level(self, loop_count):
@@ -648,9 +672,12 @@ if __name__ == '__main__':
 ###
 
 ### 持ち越し確認
-    cb.get_carry_over_users()
+#    cb.get_carry_over_users()
 ###
 
+### ボスHP更新 ###
+    cb.update_boss_hp(5)
+###
 
 ### メンバー全員の凸数確認 ###
 #    member_attack_dic    = cb.get_today_members_attack_count()
