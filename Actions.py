@@ -355,6 +355,9 @@ class Actions:
                 cb = ClanBattle.ClanBattle()
                 m = re.search("^強制退場\s+(\d+)$", req.content)
                 boss_num = m.group(1)
+                # 半角に置換
+                boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
                 cb.increment_boss_loop_count(boss_num)
                 bs_dict = cb.get_boss_status()
 
