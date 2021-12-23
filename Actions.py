@@ -407,17 +407,23 @@ class Actions:
                 self.res      = CLANBATTLE_HELP
                 return self.res_type, self.res
 
-        CLANBATTLE_DAMAGELOG_CHANNEL = os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL", "")
-        if str(req.channel.id) == CLANBATTLE_DAMAGELOG_CHANNEL:
+        CLANBATTLE_DAMAGELOG_CHANNEL = []
+        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL1", ""))
+        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL2", ""))
+        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL3", ""))
+        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL4", ""))
+        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL5", ""))
+        if str(req.channel.id) in CLANBATTLE_DAMAGELOG_CHANNEL:
             cb = ClanBattle.ClanBattle()
-            dm = cb.is_damage_memo_empty()
+            dm = cb.is_damage_memo_empty(req.channel.id)
             if re.search("^ダメージメモ$", req.content):
-                if cb.is_damage_memo_empty() is True:
+                if cb.is_damage_memo_empty(req.channel.id) is True:
                     # ダメージメモのレコード作成時は、一度メッセージを投稿してからじゃないと、
                     # これからeditしていくメッセージのIDが拾えないため投稿後に、レコードを作成する。
-                    cb_dict = cb.get_current_boss()
+                    bs_dict = cb.get_boss_status()
+                    current_boss_num = CLANBATTLE_DAMAGELOG_CHANNEL.index(str(req.channel.id)) + 1
                     self.res_type = 'damage_memo'
-                    self.res      = "さて、皆様いくら献上いただけるのかしら？\n```\n" + cb_dict['boss_name'] + '残りHP：' + str(cb_dict['hit_point']) + "\n```"
+                    self.res      = "さて、皆様いくら献上いただけるのかしら？\n```\n" + bs_dict[current_boss_num]['boss_name'] + '残りHP：' + str(bs_dict[current_boss_num]['hit_point']) + "\n```"
                     return self.res_type, self.res
                 else:
                     self.res_type = 'text'
@@ -425,7 +431,7 @@ class Actions:
                     return self.res_type, self.res
 
             if re.search("^\d+$", req.content):
-                if cb.is_damage_memo_empty() is True:
+                if cb.is_damage_memo_empty(req.channel.id) is True:
                     # ダメージメモのレコード作成時は、一度メッセージを投稿してからじゃないと、
                     # これからeditしていくメッセージのIDが拾えないため投稿後に、レコードを作成する。
                     self.res_type = 'text'
@@ -436,20 +442,21 @@ class Actions:
                 # 半角に置換
                 damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
 
-                m_id = cb.get_damage_memo_message_id()
-                cb.insert_damage_memo(message_id=m_id, user_id=req.author.id, damage=damage)
+                m_id = cb.get_damage_memo_message_id(req.channel.id)
+                cb.insert_damage_memo(message_id=m_id, user_id=req.author.id, damage=damage, channel_id=req.channel.id)
 
-                cb_dict = cb.get_current_boss()
-                mes = "さて、皆様いくら献上いただけるのかしら？\n```\n" + cb_dict['boss_name'] + '残りHP：' + str(cb_dict['hit_point']) + "\n"
+                bs_dict = cb.get_boss_status()
+                current_boss_num = CLANBATTLE_DAMAGELOG_CHANNEL.index(str(req.channel.id)) + 1
+                mes = "さて、皆様いくら献上いただけるのかしら？\n```\n" + bs_dict[current_boss_num]['boss_name'] + '残りHP：' + str(bs_dict[current_boss_num]['hit_point']) + "\n"
 
-                dm_list = cb.get_damage_memo()
+                dm_list = cb.get_damage_memo(req.channel.id)
                 sum_damage = 0
                 for dm in dm_list:
                     if dm['damage'] == 0: continue
                     mes += str(dm['id']) + '.' + dm['member_name'] + ': ' + str(dm['damage']) + "\n"
                     sum_damage = sum_damage + dm['damage']
                 sum_damage = sum_damage * 10000
-                mes += "--------\n予測ボス残りHP： " + str(cb_dict['hit_point'] - sum_damage) + "\n"
+                mes += "--------\n予測ボス残りHP： " + str(bs_dict[current_boss_num]['hit_point'] - sum_damage) + "\n"
                 mes += "```"
 
                 self.res_type = 'edit'
@@ -491,7 +498,7 @@ class Actions:
                 
     def insert_damage_memo(self, m):
         cb = ClanBattle.ClanBattle()
-        cb.insert_damage_memo(message_id=m.id, user_id=m.author.id)
+        cb.insert_damage_memo(message_id=m.id, user_id=m.author.id, channel_id=m.channel.id)
 
 
 if __name__ == '__main__':

@@ -554,9 +554,9 @@ class ClanBattle():
 
         return time
 
-    def get_damage_memo(self):
+    def get_damage_memo(self, channel_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT dm.id, dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_member cm ON dm.discord_user_id = cm.discord_user_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo GROUP BY message_id, discord_user_id)")
+        cur.execute("SELECT dm.id, dm.message_id, dm.damage, cm.member_name, dm.said_time FROM damage_memo dm INNER JOIN clan_member cm ON dm.discord_user_id = cm.discord_user_id WHERE dm.id IN ( SELECT MAX(id) FROM damage_memo WHERE channel_id = %s GROUP BY message_id, discord_user_id)", (channel_id, ))
 
         l = []
         rows = cur.fetchall()
@@ -573,33 +573,35 @@ class ClanBattle():
 #            return None
 
 
-    def get_damage_memo_message_id(self):
+    def get_damage_memo_message_id(self, channel_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT message_id FROM damage_memo LIMIT 1")
+        cur.execute("SELECT message_id FROM damage_memo WHERE channel_id = %s LIMIT 1", (channel_id,))
 
         r = cur.fetchone()
         return r[0] if r is not None else 0
 
 
-    def is_damage_memo_empty(self):
+    def is_damage_memo_empty(self, channel_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT message_id, damage, discord_user_id FROM damage_memo")
+        cur.execute("SELECT message_id, damage, discord_user_id FROM damage_memo WHERE channel_id = %s", (channel_id,))
         return True if cur.rowcount == 0 else False
 
-    def insert_damage_memo(self, message_id, user_id=None, damage=0):
+    def insert_damage_memo(self, message_id, channel_id, user_id=None, damage=0):
         said_time = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO damage_memo (message_id, discord_user_id, damage, said_time) VALUES (%s, %s, %s, %s)", (message_id, user_id, damage, said_time))
+        cur.execute("INSERT INTO damage_memo (message_id, discord_user_id, damage, said_time, channel_id) VALUES (%s, %s, %s, %s, %s)", (message_id, user_id, damage, said_time, channel_id))
         self.conn.commit()
 
-    def truncate_damage_memo(self):
+    def delete_damage_memo(self, channel_id):
         cur = self.conn.cursor()
-        cur.execute("TRUNCATE TABLE damage_memo")
-
-    def delete_damage_memo(self, discord_user_id):
-        cur = self.conn.cursor()
-        cur.execute("DELETE FROM damage_memo WHERE discord_user_id = %s", (discord_user_id,))
+        print (channel_id)
+        cur.execute("DELETE FROM damage_memo WHERE channel_id = %s", (channel_id,))
         self.conn.commit()
+
+#    def delete_damage_memo(self, discord_user_id):
+#        cur = self.conn.cursor()
+#        cur.execute("DELETE FROM damage_memo WHERE discord_user_id = %s", (discord_user_id,))
+#        self.conn.commit()
 
     def get_member_id_from_damege_memo_id(self, damage_memo_id):
         cur = self.conn.cursor()

@@ -30,13 +30,20 @@ async def on_ready():
 
 @client.event
 async def on_raw_reaction_add(payload):
-    if not client.user.id == payload.user_id and payload.channel_id == int(CLANBATTLE_DAMAGELOG_CHANNEL):
+    CLANBATTLE_DAMAGELOG_CHANNEL = []
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL1", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL2", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL3", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL4", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL5", ""))
+    if not client.user.id == payload.user_id and str(payload.channel_id) in CLANBATTLE_DAMAGELOG_CHANNEL:
         cb = ClanBattle.ClanBattle()
-        m_id = cb.get_damage_memo_message_id()
+        m_id = cb.get_damage_memo_message_id(payload.channel_id)
         if payload.message_id == int(m_id) and payload.emoji.name == emoji.emojize(':bikini:'):
-            target_message_id = await client.get_channel(int(CLANBATTLE_DAMAGELOG_CHANNEL)).fetch_message(payload.message_id)
+            target_message_id = await client.get_channel(int(payload.channel_id)).fetch_message(payload.message_id)
             await target_message_id.edit(content='お疲れ様！ダメージメモを閉じますわ。', suppress=True)
-            cb.truncate_damage_memo()
+            print (payload.channel_id)
+            cb.delete_damage_memo(payload.channel_id)
         
 #        guild_id = payload.guild_id
 #        guild = discord.utils.find(lambda g: g.id == guild_id, client.guilds)
@@ -51,6 +58,12 @@ async def on_raw_reaction_add(payload):
 
 @client.event
 async def on_message(message):
+    CLANBATTLE_DAMAGELOG_CHANNEL = []
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL1", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL2", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL3", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL4", ""))
+    CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL5", ""))
 
     # botへのメンションのときの動作(主に管理者用)
     if str(client.user.id) in message.content:
@@ -91,9 +104,10 @@ async def on_message(message):
                 act.insert_damage_memo(m)
             if res_type == 'edit':
                 cb = ClanBattle.ClanBattle()
-                m_id = cb.get_damage_memo_message_id()
+                m_id = cb.get_damage_memo_message_id(message.channel.id)
                 await message.delete()
-                edit_message = await client.get_channel(int(CLANBATTLE_DAMAGELOG_CHANNEL)).fetch_message(m_id)
+                current_boss_num = CLANBATTLE_DAMAGELOG_CHANNEL.index(str(message.channel.id))
+                edit_message = await client.get_channel(int(CLANBATTLE_DAMAGELOG_CHANNEL[current_boss_num])).fetch_message(m_id)
                 await edit_message.edit(content=res, suppress=True)
             if res_type == 'emoji':
                 for e in res:
