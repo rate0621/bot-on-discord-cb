@@ -650,9 +650,9 @@ class ClanBattle():
             return 2
         elif loop_count >= 11 and loop_count <= 30:
             return 3
-        elif loop_count >= 31 and loop_count <= 40:
+        elif loop_count >= 31 and loop_count <= 38:
             return 4
-        elif loop_count >= 41:
+        elif loop_count >= 39:
             return 5
         else:
             return 0
