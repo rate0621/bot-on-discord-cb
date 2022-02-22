@@ -657,6 +657,19 @@ class ClanBattle():
         else:
             return 0
 
+
+    def change_boss_hp(self, boss_num, hp):
+        cur = self.conn.cursor()
+        cur.execute("UPDATE boss_status SET hit_point = %s WHERE boss_id = %s", (hp, boss_num))
+        self.conn.commit()
+        
+    def change_loop_count(self, boss_num, loop_count):
+        cur = self.conn.cursor()
+        cur.execute("UPDATE boss_status SET loop_count = %s WHERE boss_id = %s", (loop_count, boss_num))
+        self.conn.commit()
+        
+
+
 if __name__ == '__main__':
     cb = ClanBattle()
     

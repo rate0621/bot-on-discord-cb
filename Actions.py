@@ -493,6 +493,16 @@ class Actions:
                 self.res = mes
                 return self.res_type, self.res
 
+        if re.search("^体力修正\s+\d+\s+\d+$", req.content):
+            m = re.search("^体力修正\s+(\d+)\s+(\d+)$", req.content)
+            cb = ClanBattle.ClanBattle()
+            cb.change_boss_hp(m.group(1), m.group(2))
+
+        if re.search("^周回修正\s+\d+\s+\d+$", req.content):
+            m = re.search("^周回修正\s+(\d+)\s+(\d+)$", req.content)
+            cb = ClanBattle.ClanBattle()
+            cb.change_loop_count(m.group(1), m.group(2))
+
                 
         return self.res_type, self.res
                 
