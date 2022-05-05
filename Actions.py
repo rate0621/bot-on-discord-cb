@@ -1,6 +1,8 @@
 import sys, os, re
 import random
 from datetime import datetime, timedelta, timezone
+from pprint import pprint
+
 import discord
 import gspread
 import response.Priconne as Pri
@@ -76,84 +78,105 @@ class Actions:
     def check_and_response(self, req):
         here = os.path.join( os.path.dirname(os.path.abspath(__file__)))
 
-        # クラバト関連のアクションはここ
-        CLANBATTLE_CHANNEL = os.getenv("CLANBATTLE_CHANNEL", "")
-        if str(req.channel.id) == CLANBATTLE_CHANNEL:
-            if re.search("^凸\s+\d+$", req.content):
-                m = re.search("^凸\s+(\d+)$", req.content)
-                boss_num = m.group(1)
-                boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+        CLANBATTLE_CHANNEL = {
+            "CLANBATTLE_CHANNEL_MAIN": os.getenv("CLANBATTLE_CHANNEL_MAIN", ""),
+            "CLANBATTLE_CHANNEL1": os.getenv("CLANBATTLE_CHANNEL1", ""),
+            "CLANBATTLE_CHANNEL2": os.getenv("CLANBATTLE_CHANNEL2", ""),
+            "CLANBATTLE_CHANNEL3": os.getenv("CLANBATTLE_CHANNEL3", ""),
+            "CLANBATTLE_CHANNEL4": os.getenv("CLANBATTLE_CHANNEL4", ""),
+            "CLANBATTLE_CHANNEL5": os.getenv("CLANBATTLE_CHANNEL5", "")
+        }
+        # CLANBATTLE_CHANNEL.append(os.getenv("CLANBATTLE_CHANNEL_MAIN", ""))
+        # CLANBATTLE_CHANNEL.append(os.getenv("CLANBATTLE_CHANNEL1", ""))
+        # CLANBATTLE_CHANNEL.append(os.getenv("CLANBATTLE_CHANNEL2", ""))
+        # CLANBATTLE_CHANNEL.append(os.getenv("CLANBATTLE_CHANNEL3", ""))
+        # CLANBATTLE_CHANNEL.append(os.getenv("CLANBATTLE_CHANNEL4", ""))
+        # CLANBATTLE_CHANNEL.append(os.getenv("CLANBATTLE_CHANNEL5", ""))
 
+
+
+        if str(req.channel.id) in CLANBATTLE_CHANNEL.values():
+            # if re.search("^凸\s+\d+$", req.content):
+            #     m = re.search("^凸\s+(\d+)$", req.content)
+            #     boss_num = m.group(1)
+            #     boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
+            #     cb = ClanBattle.ClanBattle()
+            #     self.res_type = 'text'
+            #     if cb.attack_check(str(req.author.id)):
+            #         self.res = Pri.SENGEN_ZUMI
+            #     else:
+            #         bs_dict = cb.get_boss_status()
+            #         self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
+
+            #         cb.attack(req.author.id, boss_num)
+
+            #     return self.res_type, self.res
+
+            # if re.search("^持ち越し凸\s+\d+$", req.content):
+            #     m = re.search("^持ち越し凸\s+(\d+)$", req.content)
+            #     boss_num = m.group(1)
+            #     boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+
+            #     cb = ClanBattle.ClanBattle()
+            #     self.res_type = 'text'
+            #     if cb.attack_check(str(req.author.id)):
+            #         self.res = Pri.SENGEN_ZUMI
+            #     else:
+            #         bs_dict = cb.get_boss_status()
+            #         self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
+
+            #         is_carry_over = True
+            #         cb.attack(req.author.id, boss_num, is_carry_over)
+
+            #     return self.res_type, self.res
+
+            pattern = re.compile(r"^凸完了\s+(\d+)$|^持ち越し凸完了\s+(\d+)$") 
+            if pattern.search(req.content):
                 cb = ClanBattle.ClanBattle()
                 self.res_type = 'text'
-                if cb.attack_check(str(req.author.id)):
-                    self.res = Pri.SENGEN_ZUMI
-                else:
-                    bs_dict = cb.get_boss_status()
-                    self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
+                damage = re.sub(r"\D", "", req.content)
 
-                    cb.attack(req.author.id, boss_num)
+                is_carry_over = True if re.search("持ち越し凸完了" , req.content) else False
+                
+                damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+                # boss_num = cb.get_attacked_boss_num(req.author.id)
 
-                return self.res_type, self.res
+                # ボスが撃破される前に情報を取得
+                # cb_dict = cb.get_current_boss()
 
-            if re.search("^持ち越し凸\s+\d+$", req.content):
-                m = re.search("^持ち越し凸\s+(\d+)$", req.content)
-                boss_num = m.group(1)
-                boss_num = boss_num.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
+                clanbattle_channel_key = [k for k, v in CLANBATTLE_CHANNEL.items() if v == str(req.channel.id)]
+                boss_num = re.sub(r"\D", "", clanbattle_channel_key[0])
 
-                cb = ClanBattle.ClanBattle()
-                self.res_type = 'text'
-                if cb.attack_check(str(req.author.id)):
-                    self.res = Pri.SENGEN_ZUMI
-                else:
-                    bs_dict = cb.get_boss_status()
-                    self.res = req.author.name + 'が' + bs_dict[int(boss_num)]['boss_name'] + Pri.TOTU_SURUWA
 
-                    is_carry_over = True
-                    cb.attack(req.author.id, boss_num, is_carry_over)
-
-                return self.res_type, self.res
-
-            if re.search("^凸完了\s+\d+$", req.content):
-                cb = ClanBattle.ClanBattle()
-                self.res_type = 'text'
-                if cb.attack_check(str(req.author.id)):
-                    m = re.search("^凸完了\s+(\d+)$", req.content)
-                    
-                    damage = m.group(1)
-                    damage = damage.translate(str.maketrans({chr(0xFF01 + i): chr(0x21 + i) for i in range(94)}))
-                    boss_num = cb.get_attacked_boss_num(req.author.id)
-
-                    # ボスが撃破される前に情報を取得
-                    cb_dict = cb.get_current_boss()
-
-                    # 凸予約していた場合、凸したフラグを立てる
-                    if cb.reserved_check(str(req.author.id), boss_num):
-                        cb.reserved_clear(str(req.author.id), boss_num)
+                # 凸予約していた場合、凸したフラグを立てる
+                if cb.reserved_check(str(req.author.id), boss_num):
+                    cb.reserved_clear(str(req.author.id), boss_num)
 
 #                    # 持ち越しで叩いた場合、フラグをたてる
 #                    if cb.check_carry_over(str(req.author.id)):
 #                        cb.finish_carry_over(str(req.author.id))
 
-                    is_defeat = cb.update_boss_status(int(damage), boss_num)
-                    bs_dict = cb.get_boss_status()
+                cb.attack(req.author.id, boss_num, is_carry_over)
+                is_defeat = cb.update_boss_status(int(damage), boss_num)
+                bs_dict = cb.get_boss_status()
 
-                    suf_message = ''
-                    if is_defeat:
-                        cb.update_boss_hp(boss_num)
-                        cb.insert_carry_over(str(req.author.id), boss_num, 0)
+                suf_message = ''
+                if is_defeat:
+                    cb.update_boss_hp(boss_num)
+                    cb.insert_carry_over(str(req.author.id), boss_num, 0)
 
-                        user_list = cb.get_reserved_users(boss_num)
-                        call_message = bs_dict[int(boss_num)]['boss_name'] + Pri.JIKAN_YO + "\n"
-                        if not user_list == []:
-                            for u in user_list:
-                                call_message += req.guild.get_member(int(u['discord_user_id'])).mention + "\n"
+                    user_list = cb.get_reserved_users(boss_num)
+                    call_message = bs_dict[int(boss_num)]['boss_name'] + Pri.JIKAN_YO + "\n"
+                    if not user_list == []:
+                        for u in user_list:
+                            call_message += req.guild.get_member(int(u['discord_user_id'])).mention + "\n"
 
-                        suf_message = call_message
-                    else:
-                        suf_message = bs_dict[int(boss_num)]['boss_name'] + '残り' + str(bs_dict[int(boss_num)]['hit_point']) + Pri.NOKORI_YO
+                    suf_message = call_message
+                else:
+                    suf_message = bs_dict[int(boss_num)]['boss_name'] + '残り' + str(bs_dict[int(boss_num)]['hit_point']) + Pri.NOKORI_YO
 
-                    cb.finish_attack(str(req.author.id), int(damage), is_defeat)
+                cb.finish_attack(str(req.author.id), int(damage), is_defeat)
 
 #                    if is_around:
 #                        around_count = cb.get_around_count()
@@ -163,9 +186,7 @@ class Actions:
 #                        cb.update_boss_hp(boss_level)
 
 
-                    self.res = Pri.OTSUKARE_SAMA + "\n" + suf_message
-                else:
-                    self.res = Pri.SENGEN_SITENAI
+                self.res = Pri.OTSUKARE_SAMA + "\n" + suf_message
                     
 
                 return self.res_type, self.res
@@ -407,13 +428,7 @@ class Actions:
                 self.res      = CLANBATTLE_HELP
                 return self.res_type, self.res
 
-        CLANBATTLE_DAMAGELOG_CHANNEL = []
-        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL1", ""))
-        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL2", ""))
-        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL3", ""))
-        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL4", ""))
-        CLANBATTLE_DAMAGELOG_CHANNEL.append(os.getenv("CLANBATTLE_DAMAGELOG_CHANNEL5", ""))
-        if str(req.channel.id) in CLANBATTLE_DAMAGELOG_CHANNEL:
+        if str(req.channel.id) in CLANBATTLE_CHANNEL:
             cb = ClanBattle.ClanBattle()
             dm = cb.is_damage_memo_empty(req.channel.id)
             if re.search("^ダメージメモ$", req.content):
@@ -421,7 +436,7 @@ class Actions:
                     # ダメージメモのレコード作成時は、一度メッセージを投稿してからじゃないと、
                     # これからeditしていくメッセージのIDが拾えないため投稿後に、レコードを作成する。
                     bs_dict = cb.get_boss_status()
-                    current_boss_num = CLANBATTLE_DAMAGELOG_CHANNEL.index(str(req.channel.id)) + 1
+                    current_boss_num = CLANBATTLE_CHANNEL.index(str(req.channel.id)) + 1
                     self.res_type = 'damage_memo'
                     self.res      = "さて、皆様いくら献上いただけるのかしら？\n```\n" + bs_dict[current_boss_num]['boss_name'] + '残りHP：' + str(bs_dict[current_boss_num]['hit_point']) + "\n```"
                     return self.res_type, self.res
@@ -446,7 +461,7 @@ class Actions:
                 cb.insert_damage_memo(message_id=m_id, user_id=req.author.id, damage=damage, channel_id=req.channel.id)
 
                 bs_dict = cb.get_boss_status()
-                current_boss_num = CLANBATTLE_DAMAGELOG_CHANNEL.index(str(req.channel.id)) + 1
+                current_boss_num = CLANBATTLE_CHANNEL.index(str(req.channel.id)) + 1
                 mes = "さて、皆様いくら献上いただけるのかしら？\n```\n" + bs_dict[current_boss_num]['boss_name'] + '残りHP：' + str(bs_dict[current_boss_num]['hit_point']) + "\n"
 
                 dm_list = cb.get_damage_memo(req.channel.id)
