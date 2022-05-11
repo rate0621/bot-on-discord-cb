@@ -624,6 +624,7 @@ class ClanBattle():
 #        self.conn.commit()
         
     def update_boss_hp(self, boss_num):
+        boss_num = int(boss_num)
         bs_dict = self.get_boss_status()
         level   = self.get_boss_level(bs_dict[boss_num]['loop_count'])
         level_key = 'LEVEL' + str(level)
